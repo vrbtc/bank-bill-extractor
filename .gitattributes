@@ -1,0 +1,47 @@
+# Git 编码配置
+# 确保脚本文件在不同平台上使用正确的编码
+
+# PowerShell 脚本 - UTF-8
+*.ps1 text working-tree-encoding=UTF-8
+*.psm1 text working-tree-encoding=UTF-8
+*.psd1 text working-tree-encoding=UTF-8
+
+# BAT/CMD 脚本 - UTF-8 with BOM
+*.bat text working-tree-encoding=UTF-8
+*.cmd text working-tree-encoding=UTF-8
+
+# Python 脚本 - UTF-8
+*.py text working-tree-encoding=UTF-8
+
+# 文档文件 - UTF-8
+*.md text working-tree-encoding=UTF-8
+*.txt text working-tree-encoding=UTF-8
+
+# 配置文件 - UTF-8
+*.json text working-tree-encoding=UTF-8
+*.xml text working-tree-encoding=UTF-8
+*.yaml text working-tree-encoding=UTF-8
+*.yml text working-tree-encoding=UTF-8
+
+# HTML 文件 - UTF-8
+*.html text working-tree-encoding=UTF-8
+*.htm text working-tree-encoding=UTF-8
+
+# CSS 和 JavaScript - UTF-8
+*.css text working-tree-encoding=UTF-8
+*.js text working-tree-encoding=UTF-8
+*.ts text working-tree-encoding=UTF-8
+
+# 图片文件 - binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+
+# 其他二进制文件 - binary
+*.exe binary
+*.dll binary
+*.pdf binary
+*.zip binary
