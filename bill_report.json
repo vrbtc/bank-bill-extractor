@@ -1,0 +1,610 @@
+{
+  "generated_at": "2026-03-11 22:45:47",
+  "total_bills": 16,
+  "total_amount": 1007877.7699999997,
+  "bank_summary": {
+    "兴业银行": 14,
+    "招商银行": 53,
+    "广发银行": 4,
+    "民生银行": 0,
+    "建设银行": 1,
+    "光大银行": 3
+  },
+  "bills": [
+    {
+      "subject": "兴业银行信用卡2026年03月电子账单",
+      "date": "Wed, 11 Mar 2026 14:23:20 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 75700.0,
+          "currency": "CNY"
+        },
+        {
+          "value": 37850.0,
+          "currency": "CNY"
+        },
+        {
+          "value": 75700.0,
+          "currency": "CNY"
+        },
+        {
+          "value": 116.88,
+          "currency": "CNY"
+        },
+        {
+          "value": 50.0,
+          "currency": "CNY"
+        },
+        {
+          "value": 20.0,
+          "currency": "CNY"
+        },
+        {
+          "value": 88.0,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-02-24",
+        "2026-02-24",
+        "2026-02-24",
+        "2026-02-24",
+        "2026-02-25",
+        "2026-02-25",
+        "2026-02-25",
+        "2026-02-25",
+        "2026-02-25",
+        "2026-02-25",
+        "2026-02-26",
+        "2026-02-26",
+        "2026-02-25",
+        "2026-02-26",
+        "2026-02-28",
+        "2026-03-01",
+        "2026-03-02",
+        "2026-03-03",
+        "2026-03-07",
+        "2026-03-08",
+        "2026-03-09",
+        "2026-03-09",
+        "2026-03-10",
+        "2026-03-10"
+      ],
+      "bank_name": "兴业银行",
+      "bill_type": null
+    },
+    {
+      "subject": "招商银行信用卡中心消费信贷账单",
+      "date": "Wed, 11 Mar 2026 12:06:44 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 170000.0,
+          "currency": "CNY"
+        },
+        {
+          "value": 2833.33,
+          "currency": "CNY"
+        },
+        {
+          "value": 2833.33,
+          "currency": "CNY"
+        },
+        {
+          "value": 2833.33,
+          "currency": "CNY"
+        },
+        {
+          "value": 2833.33,
+          "currency": "CNY"
+        },
+        {
+          "value": 2833.33,
+          "currency": "CNY"
+        },
+        {
+          "value": 2833.33,
+          "currency": "CNY"
+        },
+        {
+          "value": 2833.33,
+          "currency": "CNY"
+        },
+        {
+          "value": 2833.33,
+          "currency": "CNY"
+        },
+        {
+          "value": 2833.33,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-02-11",
+        "2026-03-10",
+        "2026-03-28"
+      ],
+      "bank_name": "招商银行",
+      "bill_type": null
+    },
+    {
+      "subject": "1544元露营车桌椅组合+50元还款金，推1人办卡达标可兑(AD)",
+      "date": "Sat, 7 Mar 2026 11:31:40 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 1544.0,
+          "currency": "CNY"
+        },
+        {
+          "value": 50.0,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [],
+      "bank_name": null,
+      "bill_type": null
+    },
+    {
+      "subject": "【广发卡 03月还款提醒】",
+      "date": "Tue, 03 Mar 2026 08:29:52 +0800",
+      "amounts": [
+        {
+          "value": 213.97,
+          "currency": "USD"
+        },
+        {
+          "value": 213.97,
+          "currency": "USD"
+        }
+      ],
+      "due_dates": [
+        "2026-03-06",
+        "2026/03/06",
+        "2026/03/06"
+      ],
+      "bank_name": "广发银行",
+      "bill_type": null
+    },
+    {
+      "subject": "【广发卡 02月还款提醒】",
+      "date": "Sun, 01 Mar 2026 08:34:46 +0800",
+      "amounts": [
+        {
+          "value": 213.97,
+          "currency": "USD"
+        },
+        {
+          "value": 213.97,
+          "currency": "USD"
+        }
+      ],
+      "due_dates": [
+        "2026-03-06",
+        "2026/03/06",
+        "2026/03/06"
+      ],
+      "bank_name": "广发银行",
+      "bill_type": null
+    },
+    {
+      "subject": "民生信用卡2026年02月电子对账单",
+      "date": "Sat, 28 Feb 2026 14:22:37 +0800 (CST)",
+      "amounts": [],
+      "due_dates": [
+        "2026-02-27",
+        "2026-03-19"
+      ],
+      "bank_name": "民生银行",
+      "bill_type": null
+    },
+    {
+      "subject": "1544元露营车桌椅组合+50元还款金，推1人办卡达标可兑(AD)",
+      "date": "Sat, 28 Feb 2026 12:17:05 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 1544.0,
+          "currency": "CNY"
+        },
+        {
+          "value": 50.0,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [],
+      "bank_name": null,
+      "bill_type": null
+    },
+    {
+      "subject": "中国建设银行信用卡电子账单",
+      "date": "Fri, 27 Feb 2026 16:31:45 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 744.2,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-02-26",
+        "2026-01-27",
+        "2026-02-26",
+        "2026-03-15",
+        "2026-01-28",
+        "2026-01-28",
+        "2026-02-02",
+        "2026-02-02",
+        "2026-02-07",
+        "2026-02-08",
+        "2026-02-09",
+        "2026-02-09",
+        "2026-02-10",
+        "2026-02-10",
+        "2026-02-10",
+        "2026-02-10",
+        "2026-02-13",
+        "2026-02-13",
+        "2026-02-15",
+        "2026-02-15",
+        "2026-02-15",
+        "2026-02-16",
+        "2026-02-23",
+        "2026-02-24"
+      ],
+      "bank_name": "建设银行",
+      "bill_type": null
+    },
+    {
+      "subject": "招商银行信用卡电子账单",
+      "date": "Thu, 19 Feb 2026 12:26:46 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 45000.0,
+          "currency": "CNY"
+        },
+        {
+          "value": 1243.68,
+          "currency": "CNY"
+        },
+        {
+          "value": 1180.98,
+          "currency": "CNY"
+        },
+        {
+          "value": 1243.68,
+          "currency": "CNY"
+        },
+        {
+          "value": 1180.98,
+          "currency": "CNY"
+        },
+        {
+          "value": 1243.68,
+          "currency": "CNY"
+        },
+        {
+          "value": 1392.68,
+          "currency": "CNY"
+        },
+        {
+          "value": 1292.68,
+          "currency": "CNY"
+        },
+        {
+          "value": 1243.68,
+          "currency": "CNY"
+        },
+        {
+          "value": 100.0,
+          "currency": "CNY"
+        },
+        {
+          "value": 1150.35,
+          "currency": "CNY"
+        },
+        {
+          "value": 27.33,
+          "currency": "CNY"
+        },
+        {
+          "value": 66.0,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-01-19",
+        "2026-02-18",
+        "2026-03-06",
+        "2026-02-28",
+        "2026-03-31",
+        "2026-04-30"
+      ],
+      "bank_name": "招商银行",
+      "bill_type": null
+    },
+    {
+      "subject": "招商银行分期信用卡电子账单",
+      "date": "Thu, 19 Feb 2026 12:24:42 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 2787.26,
+          "currency": "CNY"
+        },
+        {
+          "value": 2787.26,
+          "currency": "CNY"
+        },
+        {
+          "value": 2787.26,
+          "currency": "CNY"
+        },
+        {
+          "value": 2787.26,
+          "currency": "CNY"
+        },
+        {
+          "value": 2787.26,
+          "currency": "CNY"
+        },
+        {
+          "value": 2787.26,
+          "currency": "CNY"
+        },
+        {
+          "value": 2787.26,
+          "currency": "CNY"
+        },
+        {
+          "value": 2787.26,
+          "currency": "CNY"
+        },
+        {
+          "value": 139.11,
+          "currency": "CNY"
+        },
+        {
+          "value": 2648.15,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-01-19",
+        "2026-02-18",
+        "2026-03-06"
+      ],
+      "bank_name": "招商银行",
+      "bill_type": null
+    },
+    {
+      "subject": "招商银行信用卡ｅ招贷账单",
+      "date": "Thu, 19 Feb 2026 10:33:07 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 2965.57,
+          "currency": "CNY"
+        },
+        {
+          "value": 2965.57,
+          "currency": "CNY"
+        },
+        {
+          "value": 2965.57,
+          "currency": "CNY"
+        },
+        {
+          "value": 2965.57,
+          "currency": "CNY"
+        },
+        {
+          "value": 2965.57,
+          "currency": "CNY"
+        },
+        {
+          "value": 2965.57,
+          "currency": "CNY"
+        },
+        {
+          "value": 2965.57,
+          "currency": "CNY"
+        },
+        {
+          "value": 2965.57,
+          "currency": "CNY"
+        },
+        {
+          "value": 2920.29,
+          "currency": "CNY"
+        },
+        {
+          "value": 45.28,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-01-19",
+        "2026-02-18",
+        "2026-03-06"
+      ],
+      "bank_name": "招商银行",
+      "bill_type": null
+    },
+    {
+      "subject": "广发信用卡 2026年02月电子账单",
+      "date": "Wed, 18 Feb 2026 10:37:24 +0800",
+      "amounts": [],
+      "due_dates": [
+        "2026-01-18",
+        "2026-02-17",
+        "2026-02-17",
+        "2026-03-06",
+        "2026-02-11",
+        "2026-02-11",
+        "2026-02-10",
+        "2026-02-11",
+        "2026-02-05",
+        "2026-02-06",
+        "2026-01-31",
+        "2026-01-31",
+        "2026-01-26",
+        "2026-01-26",
+        "2026-01-26",
+        "2026-01-26",
+        "2026-01-19",
+        "2026-01-19",
+        "2026-01-19",
+        "2026-01-19",
+        "2026-01-19",
+        "2026-01-19"
+      ],
+      "bank_name": "广发银行",
+      "bill_type": null
+    },
+    {
+      "subject": "1544元露营车桌椅组合+50元还款金，推1人办卡达标可兑(AD)",
+      "date": "Mon, 16 Feb 2026 15:05:00 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 1544.0,
+          "currency": "CNY"
+        },
+        {
+          "value": 50.0,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [],
+      "bank_name": null,
+      "bill_type": null
+    },
+    {
+      "subject": "光大信用卡电子账单（2026年02月12日）",
+      "date": "Fri, 13 Feb 2026 18:32:35 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 96000.0,
+          "currency": "CNY"
+        },
+        {
+          "value": 13410.72,
+          "currency": "CNY"
+        },
+        {
+          "value": 268.21,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-02-12",
+        "2026-03-03",
+        "2026-01-16",
+        "2026-01-16",
+        "2026-01-23",
+        "2026-01-23",
+        "2026-02-01",
+        "2026-02-01",
+        "2026-02-01",
+        "2026-02-01",
+        "2026-02-05",
+        "2026-02-05",
+        "2026-02-05",
+        "2026-02-05"
+      ],
+      "bank_name": "光大银行",
+      "bill_type": null
+    },
+    {
+      "subject": "兴业银行信用卡2026年02月电子账单",
+      "date": "Wed, 11 Feb 2026 14:08:40 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 75700.0,
+          "currency": "CNY"
+        },
+        {
+          "value": 37850.0,
+          "currency": "CNY"
+        },
+        {
+          "value": 75700.0,
+          "currency": "CNY"
+        },
+        {
+          "value": 13135.95,
+          "currency": "CNY"
+        },
+        {
+          "value": 656.8,
+          "currency": "CNY"
+        },
+        {
+          "value": 20.0,
+          "currency": "CNY"
+        },
+        {
+          "value": 88.0,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-01-13",
+        "2026-01-13",
+        "2026-01-16",
+        "2026-01-16",
+        "2026-02-09",
+        "2026-02-09"
+      ],
+      "bank_name": "兴业银行",
+      "bill_type": null
+    },
+    {
+      "subject": "招商银行信用卡中心消费信贷账单",
+      "date": "Wed, 11 Feb 2026 13:26:15 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 170000.0,
+          "currency": "CNY"
+        },
+        {
+          "value": 2833.33,
+          "currency": "CNY"
+        },
+        {
+          "value": 2833.33,
+          "currency": "CNY"
+        },
+        {
+          "value": 2833.33,
+          "currency": "CNY"
+        },
+        {
+          "value": 2833.33,
+          "currency": "CNY"
+        },
+        {
+          "value": 2833.33,
+          "currency": "CNY"
+        },
+        {
+          "value": 2833.33,
+          "currency": "CNY"
+        },
+        {
+          "value": 2833.33,
+          "currency": "CNY"
+        },
+        {
+          "value": 2833.33,
+          "currency": "CNY"
+        },
+        {
+          "value": 2833.33,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-01-11",
+        "2026-02-10",
+        "2026-02-28"
+      ],
+      "bank_name": "招商银行",
+      "bill_type": null
+    }
+  ]
+}
