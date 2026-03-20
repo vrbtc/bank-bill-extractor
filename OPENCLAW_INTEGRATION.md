@@ -1,340 +1,459 @@
-# 银行账单自动提取系统 - OpenClaw 集成指南
+# OpenClaw 银行账单集成指南
 
-## 📋 系统概述
+## 📋 推荐方案：读取本地 JSON 文件
 
-本系统会自动从您的阿里云邮箱提取银行账单，并提供 API 接口供 OpenClaw 调用。
+### 为什么选择本地文件方案？
+
+✅ **简单快速** - 不需要启动额外服务  
+✅ **稳定可靠** - 不依赖 API 服务器  
+✅ **离线可用** - 数据已缓存到本地  
+✅ **易于集成** - OpenClaw 直接读取 JSON  
+✅ **性能优秀** - 毫秒级响应  
+
+---
 
 ## 🚀 快速开始
 
-### 1. 启动 API 服务器
+### 1. 确保账单数据已生成
 
+运行提取脚本（每天一次）：
 ```bash
-# 启动服务器（默认端口 8765）
-python openclaw_api.py
-
-# 或者只运行一次提取
-python openclaw_api.py --once
+cd "k:\Trae CN\R BANK"
+python this_month_bills.py
 ```
 
-### 2. OpenClaw 集成
+这会生成 `this_month_bills.json` 文件。
 
-#### 方法一：HTTP API 调用（推荐）
+### 2. OpenClaw 调用示例
 
-在 OpenClaw 中配置定时任务，定期调用 API：
+#### 方式 A：Python 脚本调用（推荐）
+
+在你的 OpenClaw 任务中：
 
 ```python
-# OpenClaw 任务示例
-import requests
+# OpenClaw 任务：银行账单查询
+from openclaw_bill_reader import get_upcoming_bills, check_urgent_bills, send_notification
 
-# 获取待还款账单
-response = requests.get('http://localhost:8765/api/upcoming')
-data = response.json()
+def main():
+    # 获取所有未来账单
+    result = get_upcoming_bills(days=None)
+    
+    if result['success']:
+        print(f"待还款总额：¥{result['total_amount']:,.2f}")
+        print(f"银行数量：{result['bank_count']}")
+        
+        for bank_name, info in result['banks']:
+            print(f"{bank_name}: ¥{info['total_amount']:,.2f} - {info['earliest_due_date']} ({info['days_until']}天后)")
+    
+    # 检查紧急账单
+    urgent = check_urgent_bills()
+    if urgent:
+        print("\n⚠️ 紧急账单：")
+        for bill in urgent:
+            print(f"  {bill['bank']}: ¥{bill['amount']:,.2f} ({bill['days']}天后)")
+        
+        # 发送通知
+        send_notification()
 
-print(f"待还款总额：¥{data['total_amount']:,.2f}")
-print(f"银行数量：{data['bank_count']}")
-
-for bank, info in data['upcoming_bills'].items():
-    if info['total_amount'] > 0:
-        due_date = info['earliest_due_date']['date']
-        days = info['earliest_due_date']['days_until']
-        print(f"{bank}: ¥{info['total_amount']:,.2f} | {due_date} ({days}天)")
+if __name__ == "__main__":
+    main()
 ```
 
-#### 方法二：读取 JSON 文件
-
-OpenClaw 可以直接读取生成的 JSON 文件：
+#### 方式 B：直接读取 JSON
 
 ```python
-# 读取账单数据
 import json
 
-with open('bill_data_history.json', 'r', encoding='utf-8') as f:
+# 读取账单文件
+with open(r'k:\Trae CN\R BANK\this_month_bills.json', 'r', encoding='utf-8') as f:
     data = json.load(f)
 
-# 获取待还款账单
-upcoming = data['upcoming_bills']
+# 解析数据
+print(f"生成时间：{data['generated_at']}")
+print(f"待还款总额：¥{data['upcoming_total']:,.2f}")
+print(f"账单数量：{data['total_bills']}")
+
+for bill in data['bills']:
+    bank = bill['bank_name']
+    amount = bill['amounts'][0]['value'] if bill['amounts'] else 0
+    due_date = bill['due_dates'][0] if bill['due_dates'] else '未知'
+    print(f"{bank}: ¥{amount:,.2f} - {due_date}")
 ```
 
-#### 方法三：读取文本报告
+---
+
+## 📁 文件说明
+
+### 核心文件
+
+1. **`this_month_bills.py`** - 账单提取主程序
+   - 登录邮箱提取所有账单
+   - 生成 JSON 数据文件
+   - 运行时间：约 2-5 秒
+
+2. **`this_month_bills.json`** - 账单数据文件
+   - 包含所有提取的账单
+   - JSON 格式，易于解析
+   - 自动覆盖更新
+
+3. **`openclaw_bill_reader.py`** - OpenClaw 读取模块
+   - 提供简单的 API 接口
+   - 包含错误处理
+   - 支持紧急账单检测
+
+### 配置文件
+
+- **`bill_data_history.json`** - 历史数据备份
+- **`bill_summary.txt`** - 文本格式报告
+
+---
+
+## 🔧 OpenClaw 集成方案
+
+### 方案 1：定时任务（推荐）
+
+创建定时任务，每天早上 9 点自动检查：
 
 ```python
-# 读取文本报告
-with open('bill_summary.txt', 'r', encoding='utf-8') as f:
-    report = f.read()
-
-print(report)
-```
-
-## 📡 API 端点
-
-### GET /api/status
-获取系统状态
-
-```bash
-curl http://localhost:8765/api/status
-```
-
-响应示例：
-```json
-{
-  "status": "ready",
-  "last_check": "2026-03-12 00:19:45",
-  "total_checks": 15,
-  "upcoming_banks": 4,
-  "total_amount": 15512.79,
-  "timestamp": "2026-03-12 00:20:00"
-}
-```
-
-### GET /api/bills
-获取最新账单数据
-
-```bash
-curl http://localhost:8765/api/bills
-```
-
-### GET /api/upcoming
-获取待还款账单
-
-```bash
-curl http://localhost:8765/api/upcoming
-```
-
-响应示例：
-```json
-{
-  "success": true,
-  "upcoming_bills": {
-    "建设银行": {
-      "total_amount": 1138.05,
-      "earliest_due_date": {
-        "date": "2026-03-15",
-        "days_until": 2
-      }
-    },
-    "交通银行": {
-      "total_amount": 4169.77,
-      "earliest_due_date": {
-        "date": "2026-03-15",
-        "days_until": 2
-      }
-    }
-  },
-  "total_amount": 15512.79,
-  "bank_count": 4
-}
-```
-
-### GET /api/report
-获取文本格式报告
-
-```bash
-curl http://localhost:8765/api/report
-```
-
-### POST /api/extract
-触发账单提取
-
-```bash
-curl -X POST http://localhost:8765/api/extract
-```
-
-### GET /api/errors
-获取错误日志
-
-```bash
-curl http://localhost:8765/api/errors
-```
-
-## ⏰ OpenClaw 定时任务配置
-
-### 方案一：使用 Cron（Linux/Mac）
-
-```bash
-# 编辑 crontab
-crontab -e
-
-# 添加每天上午 9 点执行的任务
-0 9 * * * cd "/k:/Trae CN/R BANK" && python openclaw_api.py --once >> bill_cron.log 2>&1
-```
-
-### 方案二：使用 Windows 任务计划程序
-
-1. 打开"任务计划程序"
-2. 创建基本任务
-3. 设置触发器（每天 9:00）
-4. 设置操作：
-   - 程序：`python.exe`
-   - 参数：`openclaw_api.py --once`
-   - 起始于：`k:\Trae CN\R BANK`
-
-### 方案三：在 OpenClaw 中配置
-
-```python
-# OpenClaw 配置示例
+# openclaw_daily_check.py
+from openclaw_bill_reader import get_upcoming_bills, check_urgent_bills, send_notification
 from apscheduler.schedulers.blocking import BlockingScheduler
-import requests
+from datetime import datetime
 
-scheduler = BlockingScheduler()
-
-@scheduler.scheduled_job('cron', hour=9, minute=0)
 def daily_bill_check():
-    """每天上午 9 点检查账单"""
-    try:
-        response = requests.post('http://localhost:8765/api/extract')
-        result = response.json()
-        
-        if result['success']:
-            if result['has_new_emails']:
-                print(f"发现新邮件，共 {result['total_bills']} 封账单")
-                
-                # 发送通知
-                send_notification(result)
-            else:
-                print("没有新邮件")
-        else:
-            print(f"提取失败：{result.get('error')}")
+    """每天早上 9 点执行"""
+    print(f"\n[{datetime.now()}] 开始检查账单...")
     
-    except Exception as e:
-        print(f"执行出错：{e}")
+    # 先刷新数据
+    import subprocess
+    subprocess.run(['python', 'this_month_bills.py'], cwd=r'k:\Trae CN\R BANK')
+    
+    # 检查紧急账单
+    urgent = check_urgent_bills()
+    
+    if urgent:
+        message = "⚠️ 紧急还款提醒\n\n"
+        for bill in urgent:
+            message += f"{bill['bank']}: ¥{bill['amount']:,.2f} ({bill['days']}天后)\n"
+        
+        message += f"\n总计：¥{sum(b['amount'] for b in urgent):,.2f}"
+        
+        # TODO: 调用通知服务
+        print(message)
+        # send_wechat(message)  # 微信
+        # send_dingtalk(message) # 钉钉
+        # send_email(message)    # 邮件
+    else:
+        print("✓ 无紧急账单")
 
-def send_notification(result):
-    """发送通知（可以集成邮件、微信等）"""
-    # TODO: 实现通知逻辑
-    pass
+# 创建调度器
+scheduler = BlockingScheduler()
+scheduler.add_job(daily_bill_check, 'cron', hour=9, minute=0)
 
+print("定时任务已启动，每天 9:00 检查账单")
 scheduler.start()
 ```
 
-## 🔔 错误通知配置
+### 方案 2：按需查询
 
-### 方案一：邮件通知
-
-在 `openclaw_api.py` 的 `send_notification` 方法中添加：
+在 OpenClaw 工作流中直接调用：
 
 ```python
-import smtplib
-from email.mime.text import MIMEText
+# openclaw_workflow.py
+from openclaw_bill_reader import get_upcoming_bills
 
-def send_email_notification(error_msg):
-    """发送邮件通知"""
-    msg = MIMEText(f"账单提取出错：{error_msg}")
-    msg['Subject'] = '银行账单提取错误通知'
-    msg['From'] = 'your_email@aliyun.com'
-    msg['To'] = 'your_email@aliyun.com'
+def query_bills():
+    """查询账单并返回结果"""
+    result = get_upcoming_bills(days=15)
     
+    if not result['success']:
+        return {'error': result['error']}
+    
+    # 格式化结果
+    output = {
+        'timestamp': result['timestamp'],
+        'total': result['total_amount'],
+        'banks': []
+    }
+    
+    for bank_name, info in result['banks']:
+        output['banks'].append({
+            'name': bank_name,
+            'amount': info['total_amount'],
+            'due_date': info['earliest_due_date'],
+            'days': info['days_until']
+        })
+    
+    return output
+
+# 执行查询
+result = query_bills()
+print(result)
+```
+
+### 方案 3：命令行调用
+
+在 OpenClaw 的 Shell 节点中：
+
+```bash
+# 查询 15 天内账单
+cd "k:\Trae CN\R BANK"
+python openclaw_bill_reader.py
+```
+
+---
+
+## 📊 数据格式
+
+### JSON 文件结构
+
+```json
+{
+  "generated_at": "2026-03-20 13:41:35",
+  "total_bills": 12,
+  "upcoming_total": 4132.98,
+  "bills": [
+    {
+      "subject": "招商银行信用卡电子账单",
+      "date": "Thu, 19 Mar 2026 12:13:53 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 1244.68,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-04-06"
+      ],
+      "bank_name": "招商银行"
+    }
+  ]
+}
+```
+
+### openclaw_bill_reader 返回格式
+
+```python
+{
+    'success': True,
+    'timestamp': '2026-03-20 13:49:52',
+    'total_amount': 4132.98,
+    'bank_count': 4,
+    'banks': [
+        ('浦发银行', {
+            'total_amount': 385.88,
+            'earliest_due_date': '2026/03/24',
+            'days_until': 3,
+            'bills': [...]
+        }),
+        ...
+    ]
+}
+```
+
+---
+
+## 🔔 通知集成
+
+### 微信通知（Server 酱）
+
+```python
+def send_wechat(message):
+    """发送微信通知"""
+    import requests
+    
+    send_key = 'YOUR_SEND_KEY'  # 替换为你的 Server 酱 KEY
+    url = f'http://sc.ftqq.com/{send_key}.send'
+    data = {
+        'text': '银行账单还款提醒',
+        'desp': message
+    }
+    requests.post(url, data=data)
+```
+
+### 钉钉通知
+
+```python
+def send_dingtalk(message):
+    """发送钉钉通知"""
+    import requests
+    import json
+    
+    webhook = 'YOUR_DINGTALK_WEBHOOK'  # 替换为你的钉钉机器人 webhook
+    
+    data = {
+        "msgtype": "text",
+        "text": {
+            "content": message
+        }
+    }
+    
+    headers = {'Content-Type': 'application/json'}
+    response = requests.post(webhook, headers=headers, data=json.dumps(data))
+    return response.json()
+```
+
+### 邮件通知
+
+```python
+def send_email(message):
+    """发送邮件通知"""
+    import smtplib
+    from email.mime.text import MIMEText
+    
+    msg = MIMEText(message)
+    msg['Subject'] = '银行账单还款提醒'
+    msg['From'] = 'rrking@aliyun.com'
+    msg['To'] = 'rrking@aliyun.com'
+    
+    # 配置 SMTP
     server = smtplib.SMTP_SSL('smtp.aliyun.com', 465)
-    server.login('your_email@aliyun.com', 'your_password')
+    server.login('rrking@aliyun.com', 'Aa2599589')
     server.send_message(msg)
     server.quit()
 ```
 
-### 方案二：微信通知
+---
 
-可以使用 Server 酱、PushPlus 等服务：
+## ⚠️ 错误处理
+
+### 常见问题
+
+1. **文件不存在**
+   ```python
+   result = get_upcoming_bills()
+   if not result['success']:
+       print(f"错误：{result['error']}")
+       # 运行提取脚本
+       import subprocess
+       subprocess.run(['python', 'this_month_bills.py'])
+   ```
+
+2. **数据过期**
+   ```python
+   from datetime import datetime, timedelta
+   
+   result = load_bills()
+   if result['success']:
+       file_time = datetime.fromtimestamp(
+           os.path.getmtime(BILL_FILE)
+       )
+       if datetime.now() - file_time > timedelta(days=1):
+           print("数据可能过期，建议刷新")
+   ```
+
+3. **解析错误**
+   ```python
+   try:
+       data = json.load(open(BILL_FILE, 'r', encoding='utf-8'))
+   except json.JSONDecodeError:
+       print("JSON 文件损坏，重新生成")
+       subprocess.run(['python', 'this_month_bills.py'])
+   ```
+
+---
+
+## 📝 完整示例
+
+### OpenClaw 完整任务脚本
 
 ```python
-import requests
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+OpenClaw 银行账单管理任务
+- 每天自动检查账单
+- 发送还款提醒
+- 记录历史数据
+"""
 
-def send_wechat_notification(error_msg):
-    """发送微信通知（使用 Server 酱）"""
-    send_key = 'YOUR_SEND_KEY'
-    url = f'http://sc.ftqq.com/{send_key}.send'
+import sys
+import json
+from datetime import datetime
+from pathlib import Path
+
+# 添加路径
+sys.path.insert(0, r'k:\Trae CN\R BANK')
+
+from openclaw_bill_reader import (
+    get_upcoming_bills,
+    check_urgent_bills,
+    send_notification,
+    load_bills
+)
+
+def main():
+    print("="*80)
+    print("OpenClaw 银行账单管理")
+    print("="*80)
+    print(f"执行时间：{datetime.now()}")
+    print()
     
-    data = {
-        'text': '银行账单提取错误',
-        'desp': f"错误信息：{error_msg}"
-    }
+    # 1. 加载数据
+    print("[1] 加载账单数据...")
+    result = load_bills()
     
-    requests.post(url, data=data)
-```
-
-### 方案三：钉钉通知
-
-```python
-import requests
-
-def send_dingtalk_notification(error_msg):
-    """发送钉钉通知"""
-    webhook = 'YOUR_DINGTALK_WEBHOOK'
+    if not result['success']:
+        print(f"    ❌ {result['error']}")
+        print("    尝试重新生成...")
+        
+        # 运行提取脚本
+        import subprocess
+        subprocess.run(['python', 'this_month_bills.py'])
+        
+        # 重新加载
+        result = load_bills()
+        if not result['success']:
+            print(f"    ❌ 仍然失败：{result['error']}")
+            return
     
-    data = {
-        'msgtype': 'text',
-        'text': {
-            'content': f"银行账单提取错误\n{error_msg}"
-        }
-    }
+    print(f"    ✓ 加载成功：{result['file_path']}")
     
-    requests.post(webhook, json=data)
+    # 2. 检查紧急账单
+    print("\n[2] 检查紧急账单...")
+    urgent = check_urgent_bills()
+    
+    if urgent:
+        print(f"    ⚠️ 发现 {len(urgent)} 个紧急账单")
+        for bill in urgent:
+            print(f"       {bill['bank']}: ¥{bill['amount']:,.2f} ({bill['days']}天后)")
+        
+        # 3. 发送通知
+        print("\n[3] 发送通知...")
+        message = send_notification()
+        if message:
+            print("    ✓ 通知已发送")
+    else:
+        print("    ✓ 无紧急账单")
+    
+    # 4. 显示汇总
+    print("\n[4] 账单汇总")
+    all_bills = get_upcoming_bills(days=None)
+    
+    if all_bills['success']:
+        print(f"    待还款总额：¥{all_bills['total_amount']:,.2f}")
+        print(f"    银行数量：{all_bills['bank_count']}")
+        
+        for bank_name, info in all_bills['banks'][:5]:  # 只显示前 5 个
+            print(f"      {bank_name}: ¥{info['total_amount']:,.2f}")
+    
+    print("\n" + "="*80)
+    print("任务完成")
+    print("="*80)
+
+if __name__ == "__main__":
+    main()
 ```
 
-## 📊 数据文件说明
+---
 
-### bill_data_history.json
-存储所有历史账单数据
+## 🎯 总结
 
-```json
-{
-  "last_check_time": "2026-03-12 00:19:45",
-  "last_email_count": 23,
-  "last_email_ids": [...],
-  "total_checks": 15,
-  "bills_history": [
-    {
-      "check_time": "2026-03-12 00:19:45",
-      "total_bills": 10,
-      "bills": [...]
-    }
-  ],
-  "upcoming_bills": {...}
-}
-```
+**推荐方案：本地 JSON 文件 + 定时刷新**
 
-### bill_summary.txt
-文本格式的汇总报告（可直接阅读）
+1. **日常使用**：OpenClaw 读取 `this_month_bills.json`
+2. **数据刷新**：定时运行 `this_month_bills.py`（每天一次）
+3. **紧急提醒**：使用 `check_urgent_bills()` 检测并通知
+4. **灵活集成**：提供多种调用方式（Python、命令行、API）
 
-### error_log.json
-错误日志文件
-
-## 🛠️ 故障排查
-
-### 1. 检查 API 服务器是否运行
-
-```bash
-curl http://localhost:8765/api/status
-```
-
-### 2. 查看错误日志
-
-```bash
-cat error_log.json
-```
-
-### 3. 手动运行一次提取
-
-```bash
-python bill_extractor_main.py
-```
-
-### 4. 检查邮箱连接
-
-确保阿里云邮箱的 IMAP 服务已开启，密码正确。
-
-## 📝 注意事项
-
-1. **首次运行**：会初始化所有数据，之后每次都会检测新邮件
-2. **新邮件判断**：通过邮件 ID 对比，不会重复处理
-3. **数据保留**：保留最近 100 次提取记录
-4. **错误处理**：出错时会记录到 error_log.json
-5. **端口占用**：如果 8765 端口被占用，可以修改 openclaw_api.py 中的端口号
-
-## 🎯 最佳实践
-
-1. **每天定时执行**：建议设置在每天上午 9 点
-2. **通知阈值**：可以设置金额阈值，超过才通知
-3. **备份数据**：定期备份 bill_data_history.json
-4. **监控日志**：定期检查 error_log.json
-
-## 📞 支持
-
-如有问题，请查看错误日志或联系技术支持。
+这种方案简单、可靠、易于维护，非常适合 OpenClaw 集成！
