@@ -62,3 +62,24 @@ credentials.json
 .git-credentials
 *.token
 *.secret
+
+# Trae IDE
+.trae/
+
+# Data files (bills, reports, logs)
+bill_data_history.json
+bill_report*.json
+bill_summary.txt
+error_log.json
+organized_bills.json
+this_month_bills.json
+bills_export_*.json
+
+# Configuration files with secrets
+config.json
+
+# HTML test files
+*.html
+
+# Summary files
+REFACTOR_SUMMARY.md
