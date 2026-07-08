@@ -7,6 +7,7 @@
 - 策略模式：支持不同银行的特殊提取逻辑
 """
 
+import os
 import email
 import json
 from datetime import datetime, timedelta
@@ -17,10 +18,8 @@ from email_decoder import EmailDecoder
 from bank_extractors import BankExtractorFactory
 
 
-EMAIL_ADDRESS = "rrking@aliyun.com"
-PASSWORD = "Aa2599589"
-IMAP_SERVER = "imap.aliyun.com"
-IMAP_PORT = 993
+# 支持环境变量配置（CI 环境），回退到默认值（本地运行）
+from config import EMAIL_ADDRESS, PASSWORD, IMAP_SERVER, IMAP_PORT
 
 
 class BillExtractor:

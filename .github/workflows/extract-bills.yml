@@ -1,0 +1,52 @@
+name: 账单自动提取
+
+on:
+  # 定时触发：每天北京时间 9:00（UTC 1:00）
+  schedule:
+    - cron: '0 1 * * *'
+  # 手动触发
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  extract-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 安装依赖
+        run: |
+          pip install -r requirements.txt
+
+      - name: 提取银行账单
+        env:
+          EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          IMAP_SERVER: imap.aliyun.com
+          IMAP_PORT: '993'
+        run: |
+          python ci_extract.py
+
+      - name: 提交数据到仓库
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/bills.json docs/bills_raw.json
+          git commit -m "Auto-update: $(date -u '+%Y-%m-%d %H:%M') 账单数据" || echo "No changes to commit"
+          git push
+
+      - name: 输出摘要
+        run: |
+          echo "=== 账单提取完成 ==="
+          cat docs/bills.json | python -m json.tool | head -20

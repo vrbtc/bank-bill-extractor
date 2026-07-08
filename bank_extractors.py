@@ -66,34 +66,71 @@ class GuangfaBankExtractor(BaseBankExtractor):
         return ['广发银行']
     
     def preprocess_text(self, full_text):
-        """广发银行不替换 &yen;"""
         return full_text.replace('&amp;', '&')
     
     def extract_amount(self, full_text, bill_info):
-        """提取广发银行金额"""
+        soup = BeautifulSoup(full_text, 'html.parser')
+        clean_text = soup.get_text()
+        clean_text = ' '.join(clean_text.split())
+        
+        amount_match = re.search(r'卡号末四位\s+本期账单金额\s+最低还款额\s+最后还款日\s+入账货币\s+存款\s+卡片消费额度\s+\d+\s+([\d,]+\.\d+)', clean_text)
+        if amount_match:
+            try:
+                amount = float(amount_match.group(1).replace(',', ''))
+                if 0 < amount < 1000000:
+                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                    return
+            except:
+                pass
+        
+        amount_match = re.search(r'本期账单金额\s+最低还款额.*?\d{4}\s+([\d,]+\.\d{2})', clean_text)
+        if amount_match:
+            try:
+                amount = float(amount_match.group(1).replace(',', ''))
+                if 0 < amount < 1000000:
+                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                    return
+            except:
+                pass
+        
         amount_match = re.search(r'&yen;[^>]*>[^>]*>([\d,]+\.?\d*)', full_text)
         if amount_match:
             try:
                 amount = float(amount_match.group(1).replace(',', ''))
                 if 0 < amount < 1000000:
                     bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                    return
+            except:
+                pass
+    
+    def extract_due_date(self, full_text, bill_info):
+        soup = BeautifulSoup(full_text, 'html.parser')
+        clean_text = soup.get_text()
+        clean_text = ' '.join(clean_text.split())
+        
+        due_match = re.search(r'最后还款日\s+入账货币\s+存款\s+卡片消费额度\s+\d+\s+[\d,]+\.\d+\s+[\d,]+\.\d+\s+(\d{4}/\d{2}/\d{2})', clean_text)
+        if due_match:
+            date_str = due_match.group(1).replace('/', '-')
+            try:
+                datetime.strptime(date_str, '%Y-%m-%d')
+                if date_str not in bill_info['due_dates']:
+                    bill_info['due_dates'].append(date_str)
+                return
             except:
                 pass
         
-        if not bill_info['amounts']:
-            amount_matches = re.findall(r'>([\d,]+\.\d{2})<', full_text)
-            for amt_str in amount_matches:
-                try:
-                    amount = float(amt_str.replace(',', ''))
-                    if 1000 < amount < 100000:
-                        bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
-                        break
-                except:
-                    continue
-    
-    def extract_due_date(self, full_text, bill_info):
-        """提取广发银行还款日"""
-        due_patterns = [r'([0-9]{4}/[0-9]{2}/[0-9]{2})']
+        due_match = re.search(r'最后还款日.*?(\d{4}/\d{2}/\d{2})', clean_text)
+        if due_match:
+            date_str = due_match.group(1).replace('/', '-')
+            try:
+                datetime.strptime(date_str, '%Y-%m-%d')
+                if date_str not in bill_info['due_dates']:
+                    bill_info['due_dates'].append(date_str)
+                return
+            except:
+                pass
+        
+        due_patterns = [r'最后还款日.*?(\d{4}/\d{2}/\d{2})']
         for pattern in due_patterns:
             matches = re.findall(pattern, full_text)
             for match in matches:
@@ -183,6 +220,547 @@ class CMBBankExtractor(BaseBankExtractor):
                         bill_info['due_dates'].append(date_str)
 
 
+class CCBBankExtractor(BaseBankExtractor):
+    """建设银行提取器"""
+    
+    def get_supported_banks(self):
+        return ['建设银行']
+    
+    def extract_amount(self, full_text, bill_info):
+        """提取建设银行金额 - 精确匹配本期全部应还款额"""
+        
+        # 模式1：精确匹配"应还款信息"表格中的New Balance（最准确）
+        amount_match = re.search(
+            r'应还款信息.*?Payment Information.*?'
+            r'New Balance.*?</b></font>\s*</td>\s*<td[^>]*>.*?</td>\s*'
+            r'<td bgcolor="#EAEAEA"><font size=\'3\'[^>]*><b>([0-9,]+\.[0-9]+)</b></font>',
+            full_text,
+            re.DOTALL | re.IGNORECASE
+        )
+        
+        if amount_match:
+            try:
+                amount = float(amount_match.group(1).replace(',', ''))
+                if 100 < amount < 100000:
+                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                    return
+            except:
+                pass
+        
+        # 模式2：查找带<b>标签的New Balance金额（备选）
+        amount_matches = re.findall(
+            r'New Balance.*?<b>([0-9,]+\.[0-9]+)</b>',
+            full_text,
+            re.DOTALL | re.IGNORECASE
+        )
+        
+        for amount_str in amount_matches:
+            try:
+                amount = float(amount_str.replace(',', ''))
+                if 100 < amount < 100000:
+                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                    return
+            except:
+                continue
+        
+        # 模式3：查找"本期全部应还款额"后面紧跟的<b>金额</b>（最后备选）
+        amount_match = re.search(
+            r'本期全部应还款额.*?<b>([0-9,]+\.[0-9]+)</b>',
+            full_text,
+            re.DOTALL
+        )
+        
+        if amount_match:
+            try:
+                amount = float(amount_match.group(1).replace(',', ''))
+                if 100 < amount < 100000:
+                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+            except:
+                pass
+    
+    def extract_due_date(self, full_text, bill_info):
+        """提取建设银行还款日"""
+        due_patterns = [
+            r'到期还款日.*?([0-9]{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
+            r'还款日.*?([0-9]{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
+            r'Payment Due Date.*?([0-9]{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
+        ]
+        
+        for pattern in due_patterns:
+            matches = re.findall(pattern, full_text, re.DOTALL)
+            for match in matches:
+                if match not in bill_info['due_dates']:
+                    bill_info['due_dates'].append(match)
+
+
+class CommBankExtractor(BaseBankExtractor):
+    """交通银行提取器"""
+    
+    def get_supported_banks(self):
+        return ['交通银行']
+    
+    def extract_amount(self, full_text, bill_info):
+        """提取交通银行金额"""
+        # 特殊处理：直接读取 HTML 中的金额
+        pos = full_text.find('本期应还款')
+        if pos != -1:
+            snippet = full_text[pos:pos+200]
+            amount_match = re.search(r'￥([0-9,]+\.?[0-9]*)', snippet)
+            if amount_match:
+                amount_str = amount_match.group(1).replace(',', '')
+                try:
+                    amount = float(amount_str)
+                    if 0 < amount < 1000000:
+                        bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                except:
+                    pass
+        
+        # 如果没找到，尝试通用模式
+        if not bill_info['amounts']:
+            amount_patterns = [
+                r'本期应还款.*?￥([0-9,]+\.?[0-9]*)(?!.*最低)',
+                r'Statement Balance.*?￥([0-9,]+\.?[0-9]*)',
+                r'本期账单金额.*?￥([0-9,]+\.?[0-9]*)',
+            ]
+            
+            for pattern in amount_patterns:
+                matches = re.findall(pattern, full_text, re.DOTALL)
+                for match in matches:
+                    amount_str = match.replace(',', '')
+                    try:
+                        amount = float(amount_str)
+                        if 0 < amount < 1000000:
+                            if not any(a['value'] == amount for a in bill_info['amounts']):
+                                bill_info['amounts'].append({'value': amount, 'currency': 'CNY'})
+                    except:
+                        continue
+    
+    def extract_due_date(self, full_text, bill_info):
+        """提取交通银行还款日"""
+        # 特殊处理交通银行的还款日格式
+        due_match = re.search(
+            r'Payment Due Date.*?<span[^>]*>([0-9]{4}-[0-9]{2}-[0-9]{2})',
+            full_text,
+            re.DOTALL
+        )
+        if due_match:
+            if due_match.group(1) not in bill_info['due_dates']:
+                bill_info['due_dates'].append(due_match.group(1))
+        
+        # 如果没找到，使用通用模式
+        if not bill_info['due_dates']:
+            due_patterns = [
+                r'到期还款日.*?([0-9]{4}[-/.年][0-9]{1,2}[-/.月][0-9]{1,2}[-/.日]*)',
+                r'Payment Due Date.*?([0-9]{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
+                r'还款日.*?([0-9]{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
+            ]
+            
+            for pattern in due_patterns:
+                matches = re.findall(pattern, full_text)
+                for match in matches:
+                    date_str = match.replace('年', '-').replace('月', '-').replace('日', '')
+                    if len(date_str) <= 5:
+                        current_year = datetime.now().year
+                        date_str = f"{current_year}-{date_str}"
+                    
+                    date_str = date_str.replace('/', '-')
+                    
+                    try:
+                        datetime.strptime(date_str, '%Y-%m-%d')
+                        if date_str not in bill_info['due_dates']:
+                            bill_info['due_dates'].append(date_str)
+                    except:
+                        continue
+
+
+class SPDBankExtractor(BaseBankExtractor):
+    """浦发银行提取器"""
+    
+    def get_supported_banks(self):
+        return ['浦发银行']
+    
+    def extract_amount(self, full_text, bill_info):
+        """提取浦发银行金额"""
+        amount_patterns = [
+            r'本期应还款.*?[￥$¥]\s*([\d,]+\.?\d*)',
+            r'本期账单金额.*?[￥$¥]\s*([\d,]+\.?\d*)',
+            r'账单金额.*?[￥$¥]\s*([\d,]+\.?\d*)',
+        ]
+        
+        for pattern in amount_patterns:
+            matches = re.findall(pattern, full_text, re.IGNORECASE | re.DOTALL)
+            for match in matches:
+                amount_str = match.replace(',', '')
+                try:
+                    amount = float(amount_str)
+                    if 10 < amount < 1000000:
+                        if not any(a['value'] == amount for a in bill_info['amounts']):
+                            bill_info['amounts'].append({'value': amount, 'currency': 'CNY'})
+                except:
+                    continue
+    
+    def extract_due_date(self, full_text, bill_info):
+        """提取浦发银行还款日"""
+        due_patterns = [
+            r'到期还款日.*?([0-9]{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
+            r'还款日.*?([0-9]{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
+            r'Payment Due Date.*?([0-9]{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
+        ]
+        
+        for pattern in due_patterns:
+            matches = re.findall(pattern, full_text, re.DOTALL)
+            for match in matches:
+                if match not in bill_info['due_dates']:
+                    bill_info['due_dates'].append(match)
+
+
+class PSBCBankExtractor(BaseBankExtractor):
+    """邮储银行提取器"""
+    
+    def get_supported_banks(self):
+        return ['邮储银行']
+    
+    def extract_amount(self, full_text, bill_info):
+        """提取邮储银行金额"""
+        amount_patterns = [
+            r'本期应还款总额.*?￥([0-9,]+\.?[0-9]*)',
+            r'本期应还款.*?￥([0-9,]+\.?[0-9]*)',
+            r'本期账单金额.*?￥([0-9,]+\.?[0-9]*)',
+        ]
+        
+        for pattern in amount_patterns:
+            matches = re.findall(pattern, full_text)
+            for match in matches:
+                try:
+                    amount = float(match.replace(',', ''))
+                    if 10 < amount < 100000:
+                        bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                        break
+                except:
+                    pass
+    
+    def extract_due_date(self, full_text, bill_info):
+        """提取邮储银行还款日"""
+        due_patterns = [
+            r'到期还款日.*?([0-9]{4}年 [0-9]{1,2}月 [0-9]{1,2}日)',
+            r'还款日.*?([0-9]{4}年 [0-9]{1,2}月 [0-9]{1,2}日)',
+            r'Payment Due Date.*?([0-9]{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
+        ]
+        
+        for pattern in due_patterns:
+            matches = re.findall(pattern, full_text)
+            for match in matches:
+                date_str = match.replace('年', '-').replace('月', '-').replace('日', '')
+                date_str = date_str.replace('/', '-')
+                
+                try:
+                    datetime.strptime(date_str, '%Y-%m-%d')
+                    if date_str not in bill_info['due_dates']:
+                        bill_info['due_dates'].append(date_str)
+                except:
+                    continue
+
+
+class CMBCBankExtractor(BaseBankExtractor):
+    """民生银行提取器"""
+    
+    def get_supported_banks(self):
+        return ['民生银行']
+    
+    def extract_amount(self, full_text, bill_info):
+        """提取民生银行金额 - 精确匹配RMB格式"""
+        
+        # 模式1：精确匹配 RMB 金额格式（最准确）
+        amount_match = re.search(r'RMB\s*([0-9,]+\.[0-9]{2})', full_text)
+        
+        if amount_match:
+            try:
+                amount = float(amount_match.group(1).replace(',', ''))
+                if 10 < amount < 100000:
+                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                    return
+            except:
+                pass
+        
+        # 模式2：查找"本期应还款"相关金额（备选）
+        amount_patterns = [
+            r'本期应还款.*?￥([0-9,]+\.?[0-9]*)',
+            r'本期账单金额.*?([0-9,]+\.?[0-9]*)',
+        ]
+        
+        for pattern in amount_patterns:
+            matches = re.findall(pattern, full_text)
+            if matches:
+                try:
+                    amount = float(matches[0].replace(',', ''))
+                    if 10 < amount < 100000:
+                        bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                        return
+                except:
+                    continue
+    
+    def extract_due_date(self, full_text, bill_info):
+        """提取民生银行还款日"""
+        due_patterns = [
+            r'到期还款日.*?([0-9]{4}[-/.年][0-9]{1,2}[-/.月][0-9]{1,2}[-/.日]*)',
+            r'Payment Due Date.*?([0-9]{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
+            r'还款日.*?([0-9]{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
+        ]
+        
+        for pattern in due_patterns:
+            matches = re.findall(pattern, full_text)
+            for match in matches:
+                date_str = match.replace('年', '-').replace('月', '-').replace('日', '')
+                if len(date_str) <= 5:
+                    current_year = datetime.now().year
+                    date_str = f"{current_year}-{date_str}"
+                
+                date_str = date_str.replace('/', '-')
+                
+                try:
+                    datetime.strptime(date_str, '%Y-%m-%d')
+                    if date_str not in bill_info['due_dates']:
+                        bill_info['due_dates'].append(date_str)
+                except:
+                    continue
+
+
+class CIBBankExtractor(BaseBankExtractor):
+    """兴业银行提取器"""
+
+    def get_supported_banks(self):
+        return ['兴业银行']
+
+    def extract_amount(self, full_text, bill_info):
+        soup = BeautifulSoup(full_text, 'html.parser')
+        clean_text = soup.get_text()
+        clean_text = ' '.join(clean_text.split())
+
+        amount_match = re.search(r'本期应还款总额\s*New Balance\s*RMB\s*([\d,]+\.\d+)', clean_text)
+        if amount_match:
+            try:
+                amount = float(amount_match.group(1).replace(',', ''))
+                if 0 < amount < 1000000:
+                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                    return
+            except:
+                pass
+
+        amount_match = re.search(r'本期账单金额\s*New Activity\s*([\d,]+\.\d+)', clean_text)
+        if amount_match:
+            try:
+                amount = float(amount_match.group(1).replace(',', ''))
+                if 0 < amount < 1000000:
+                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                    return
+            except:
+                pass
+
+        amount_match = re.search(r'New Balance.*?RMB\s*([\d,]+\.\d+)', clean_text)
+        if amount_match:
+            try:
+                amount = float(amount_match.group(1).replace(',', ''))
+                if 0 < amount < 1000000:
+                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+            except:
+                pass
+
+    def extract_due_date(self, full_text, bill_info):
+        soup = BeautifulSoup(full_text, 'html.parser')
+        clean_text = soup.get_text()
+        clean_text = ' '.join(clean_text.split())
+
+        due_match = re.search(r'到期还款日\s*Payment Due Date\s*(\d{4})年(\d{1,2})月(\d{1,2})日', clean_text)
+        if due_match:
+            date_str = f"{due_match.group(1)}-{due_match.group(2).zfill(2)}-{due_match.group(3).zfill(2)}"
+            if date_str not in bill_info['due_dates']:
+                bill_info['due_dates'].append(date_str)
+            return
+
+        due_match = re.search(r'Payment Due Date\s*(\d{4})年(\d{1,2})月(\d{1,2})日', clean_text)
+        if due_match:
+            date_str = f"{due_match.group(1)}-{due_match.group(2).zfill(2)}-{due_match.group(3).zfill(2)}"
+            if date_str not in bill_info['due_dates']:
+                bill_info['due_dates'].append(date_str)
+            return
+
+        due_patterns = [
+            r'到期还款日.*?(\d{4})年(\d{1,2})月(\d{1,2})日',
+            r'Payment Due Date.*?(\d{4})年(\d{1,2})月(\d{1,2})日',
+        ]
+        for pattern in due_patterns:
+            matches = re.findall(pattern, clean_text)
+            for match in matches:
+                date_str = f"{match[0]}-{match[1].zfill(2)}-{match[2].zfill(2)}"
+                try:
+                    datetime.strptime(date_str, '%Y-%m-%d')
+                    if date_str not in bill_info['due_dates']:
+                        bill_info['due_dates'].append(date_str)
+                except:
+                    continue
+
+
+class PingAnBankExtractor(BaseBankExtractor):
+    """平安银行提取器"""
+    
+    def get_supported_banks(self):
+        return ['平安银行']
+    
+    def extract_amount(self, full_text, bill_info):
+        soup = BeautifulSoup(full_text, 'html.parser')
+        clean_text = soup.get_text()
+        clean_text = ' '.join(clean_text.split())
+        
+        amount_match = re.search(r'本期应还金额\s+[￥¥]\s*([\d,]+\.\d+)', clean_text)
+        if amount_match:
+            try:
+                amount = float(amount_match.group(1).replace(',', ''))
+                if 0 < amount < 1000000:
+                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                    return
+            except:
+                pass
+        
+        amount_match = re.search(r'本期应还金额.*?[￥¥]\s*([\d,]+\.\d+)', clean_text)
+        if amount_match:
+            try:
+                amount = float(amount_match.group(1).replace(',', ''))
+                if 0 < amount < 1000000:
+                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                    return
+            except:
+                pass
+        
+        amount_match = re.search(r'&yen;\s*([\d,]+\.\d+)', full_text)
+        if amount_match:
+            try:
+                amount = float(amount_match.group(1).replace(',', ''))
+                if 0 < amount < 1000000:
+                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+            except:
+                pass
+    
+    def extract_due_date(self, full_text, bill_info):
+        soup = BeautifulSoup(full_text, 'html.parser')
+        clean_text = soup.get_text()
+        clean_text = ' '.join(clean_text.split())
+        
+        due_match = re.search(r'本期还款日\s+(\d{4}-\d{2}-\d{2})', clean_text)
+        if due_match:
+            date_str = due_match.group(1)
+            if date_str not in bill_info['due_dates']:
+                bill_info['due_dates'].append(date_str)
+            return
+        
+        due_patterns = [
+            r'还款日.*?(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})',
+            r'Payment Due Date.*?(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})',
+        ]
+        for pattern in due_patterns:
+            matches = re.findall(pattern, clean_text)
+            for match in matches:
+                date_str = match.replace('/', '-').replace('.', '-')
+                try:
+                    datetime.strptime(date_str, '%Y-%m-%d')
+                    if date_str not in bill_info['due_dates']:
+                        bill_info['due_dates'].append(date_str)
+                except:
+                    continue
+
+
+class CEBBankExtractor(BaseBankExtractor):
+    """光大银行提取器"""
+    
+    def get_supported_banks(self):
+        return ['光大银行']
+    
+    def extract_amount(self, full_text, bill_info):
+        soup = BeautifulSoup(full_text, 'html.parser')
+        clean_text = soup.get_text()
+        clean_text = ' '.join(clean_text.split())
+        
+        amount_match = re.search(r'人民币本期账单金额\s*RMB Statement Balance\s*人民币本期最低还款额.*?￥[\d,]+\.\d+\s*￥([\d,]+\.\d+)', clean_text)
+        if amount_match:
+            try:
+                amount = float(amount_match.group(1).replace(',', ''))
+                if 0 < amount < 1000000:
+                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                    return
+            except:
+                pass
+        
+        amount_match = re.search(r'人民币本期账单金额.*?￥[\d,]+\.\d+\s*￥([\d,]+\.\d+)', clean_text)
+        if amount_match:
+            try:
+                amount = float(amount_match.group(1).replace(',', ''))
+                if 0 < amount < 1000000:
+                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                    return
+            except:
+                pass
+        
+        amount_match = re.search(r'本期账单金额\s*Statement Balance\s*本期最低还款额.*?[\d,]+\.\d+\s*([\d,]+\.\d+)', clean_text)
+        if amount_match:
+            try:
+                amount = float(amount_match.group(1).replace(',', ''))
+                if 0 < amount < 1000000:
+                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                    return
+            except:
+                pass
+        
+        amount_match = re.search(r'本期欠款\s*Closing Balance[：:]\s*([\d,]+\.\d+)', clean_text)
+        if amount_match:
+            try:
+                amount = float(amount_match.group(1).replace(',', ''))
+                if 0 < amount < 1000000:
+                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+            except:
+                pass
+    
+    def extract_due_date(self, full_text, bill_info):
+        soup = BeautifulSoup(full_text, 'html.parser')
+        clean_text = soup.get_text()
+        clean_text = ' '.join(clean_text.split())
+        
+        due_match = re.search(r'到期还款日\s*Payment Due Date\s*信用额度.*?(\d{4}/\d{2}/\d{2})\s+(\d{4}/\d{2}/\d{2})', clean_text)
+        if due_match:
+            date_str = due_match.group(2).replace('/', '-')
+            try:
+                datetime.strptime(date_str, '%Y-%m-%d')
+                if date_str not in bill_info['due_dates']:
+                    bill_info['due_dates'].append(date_str)
+                return
+            except:
+                pass
+        
+        due_match = re.search(r'Payment Due Date.*?(\d{4}/\d{2}/\d{2})\s+(\d{4}/\d{2}/\d{2})', clean_text)
+        if due_match:
+            date_str = due_match.group(2).replace('/', '-')
+            try:
+                datetime.strptime(date_str, '%Y-%m-%d')
+                if date_str not in bill_info['due_dates']:
+                    bill_info['due_dates'].append(date_str)
+                return
+            except:
+                pass
+        
+        due_patterns = [
+            r'到期还款日.*?(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})',
+            r'Payment Due Date.*?(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})',
+        ]
+        for pattern in due_patterns:
+            matches = re.findall(pattern, clean_text)
+            for match in matches:
+                date_str = match.replace('/', '-').replace('.', '-')
+                try:
+                    datetime.strptime(date_str, '%Y-%m-%d')
+                    if date_str not in bill_info['due_dates']:
+                        bill_info['due_dates'].append(date_str)
+                except:
+                    continue
+
+
 class OtherBankExtractor(BaseBankExtractor):
     """其他银行提取器（通用实现）"""
     
@@ -241,10 +819,17 @@ class BankExtractorFactory:
         self._register_default_extractors()
     
     def _register_default_extractors(self):
-        """注册默认的银行提取器"""
         extractors = [
             GuangfaBankExtractor(),
             CMBBankExtractor(),
+            CCBBankExtractor(),
+            CommBankExtractor(),
+            SPDBankExtractor(),
+            PSBCBankExtractor(),
+            CMBCBankExtractor(),
+            CIBBankExtractor(),
+            PingAnBankExtractor(),
+            CEBBankExtractor(),
         ]
         
         for extractor in extractors:
