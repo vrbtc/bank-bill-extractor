@@ -1,19 +1,17 @@
 # 🏦 银行账单自动提取系统
 
-一个完全自动化的银行账单提取、分析和智能提醒系统，支持 OpenClaw 集成和多银行数据提取。
+自动从阿里云邮箱提取银行信用卡账单邮件，解析金额和还款日，生成在线仪表盘部署到 GitHub Pages，并自动同步到滴答清单提醒还款。
 
-## ✨ 特性
+## ✨ 核心特性
 
-- 🔍 **自动提取** - 从邮箱自动提取多家银行账单
-- 📊 **智能分析** - 提取金额、还款日等关键信息
-- 🔔 **还款提醒** - 智能识别近期待还款账单
-- 🌐 **API 服务** - 提供 REST API 供 OpenClaw 等系统集成
-- 💾 **数据持久化** - 自动保存历史账单数据
-- 📝 **多格式报告** - 支持 JSON 和文本格式报告
+- 📧 **邮箱自动提取** — 通过 IMAP 协议从阿里云邮箱拉取银行账单邮件
+- 🏦 **多银行解析** — 支持 12 家银行的金额和还款日提取
+- 📊 **在线仪表盘** — 自动生成静态 HTML 仪表盘，部署到 GitHub Pages
+- ⏰ **定时运行** — GitHub Actions 每天 2 次自动运行（北京时间 11:00 和 17:00）
+- 📋 **滴答清单同步** — 自动将账单创建为滴答清单任务，含智能优先级和到期提醒
+- 🔒 **安全配置** — 密码等敏感信息通过 GitHub Secrets 加密存储，不进入代码
 
 ## 🏦 支持的银行
-
-已测试并完美支持的银行：
 
 | 银行 | 金额提取 | 还款日提取 | 状态 |
 |------|---------|-----------|------|
@@ -25,332 +23,407 @@
 | 招商银行 | ✅ | ✅ | 支持 |
 | 光大银行 | ✅ | ✅ | 支持 |
 | 广发银行 | ✅ | ✅ | 支持 |
+| 平安银行 | ✅ | ✅ | 支持 |
+| 中信银行 | ✅ | ✅ | 支持 |
+| 浦发银行 | ✅ | ✅ | 支持 |
+| 中银香港 | ✅ | ✅ | 支持 |
 
-## 📦 安装
+---
 
-### 环境要求
+## 🚀 快速部署（GitHub Actions + Pages）
 
-- Python 3.7+
-- 阿里云邮箱账户（支持 IMAP）
-- 网络连接
+### 前置条件
 
-### 克隆项目
+- GitHub 账号
+- 阿里云邮箱（已开启 IMAP 服务）
+- 银行账单邮件已发送到该邮箱
+- 滴答清单账号 + API Key（可选，不配置则跳过同步）
+
+### 第 1 步：克隆仓库
 
 ```bash
-git clone git@github.com:vrbtc/bank-bill-extractor.git
+git clone https://github.com/vrbtc/bank-bill-extractor.git
 cd bank-bill-extractor
 ```
 
-### 依赖安装
+### 第 2 步：启用 GitHub Pages
 
-本项目使用 Python 标准库，无需额外安装依赖。
+1. 进入仓库 **Settings → Pages**
+2. **Source** 选择 **GitHub Actions**（不是 Deploy from a branch）
+3. 保存
 
-## 🚀 快速开始
+### 第 3 步：配置 GitHub Secrets
 
-### 方法 1：运行一次提取
+进入仓库 **Settings → Secrets and variables → Actions → New repository secret**，添加以下 5 个密钥：
+
+| Secret 名称 | 值 | 说明 |
+|-------------|---|------|
+| `EMAIL_ADDRESS` | `your_email@aliyun.com` | 阿里云邮箱地址 |
+| `EMAIL_PASSWORD` | `your_password` | 邮箱登录密码（账号密码，非授权码） |
+| `IMAP_SERVER` | `imap.aliyun.com` | IMAP 服务器地址 |
+| `IMAP_PORT` | `993` | IMAP 端口 |
+| `TICKTICK_API_KEY` | `dp_xxxxxxxxxxxxxxxx` | 滴答清单 API Key（可选，不配则跳过同步） |
+
+> **注意**：阿里云邮箱用账号密码直接登录 IMAP，不需要像 QQ 邮箱/163 邮箱那样生成授权码。
+
+> **滴答清单 API Key 获取**：访问 [滴答清单开放平台](https://developer.dida365.com/) 申请。
+
+### 第 4 步：触发首次运行
+
+进入仓库 **Actions → Deploy Bank Bill Dashboard → Run workflow** 手动触发一次。
+
+### 第 5 步：访问仪表盘
+
+运行成功后访问：
+
+```
+https://<你的用户名>.github.io/bank-bill-extractor/
+```
+
+例如：https://vrbtc.github.io/bank-bill-extractor/
+
+---
+
+## 🖥️ 本地运行
+
+### 环境要求
+
+- Python 3.8+
+- 阿里云邮箱账户
+
+### 安装依赖
 
 ```bash
-python bill_extractor_main.py
+pip install -r requirements.txt
 ```
 
-### 方法 2：启动 API 服务器
+依赖清单（requirements.txt）：
+- `beautifulsoup4` — HTML 解析
+- `html2text` — HTML 转文本
+- `requests` — 滴答清单 API 调用
+
+### 配置
+
+**方式一：config.json（推荐本地使用）**
+
+复制 `config.example.json` 为 `config.json`，填入你的信息：
+
+```json
+{
+  "email_address": "your_email@aliyun.com",
+  "email_password": "your_password",
+  "imap_server": "imap.aliyun.com",
+  "imap_port": 993,
+  "ticktick_api_key": "dp_your_api_key_here"
+}
+```
+
+> `config.json` 已在 `.gitignore` 中，不会被提交。
+
+**方式二：环境变量（CI 环境推荐）**
 
 ```bash
-python openclaw_api.py
+export EMAIL_ADDRESS=your_email@aliyun.com
+export EMAIL_PASSWORD=your_password
+export IMAP_SERVER=imap.aliyun.com
+export IMAP_PORT=993
+export TICKTICK_API_KEY=dp_your_api_key_here
 ```
 
-然后访问：http://localhost:8765
+配置加载优先级（config.py）：环境变量 > config.json > 默认值
 
-### 方法 3：OpenClaw 集成调用
+### 运行
 
-```python
-import requests
+```bash
+# 生成仪表盘 HTML（输出到 gh-pages/ 目录，同时自动同步滴答清单）
+python generate_dashboard.py
 
-# 获取待还款账单
-response = requests.get('http://localhost:8765/api/upcoming')
-data = response.json()
+# 仅提取账单并输出 JSON
+python this_month_bills.py
 
-print(f"待还款总额：¥{data['total_amount']:,.2f}")
-print(f"银行数量：{data['bank_count']}")
-
-for bank, info in data['upcoming_bills'].items():
-    if info['total_amount'] > 0:
-        due_date = info['earliest_due_date']['date']
-        days = info['earliest_due_date']['days_until']
-        print(f"{bank}: ¥{info['total_amount']:,.2f} | {due_date} ({days}天)")
+# 提取 + 紧急检查 + 滴答清单同步
+python daily_run.py
 ```
+
+---
 
 ## 📁 项目结构
 
 ```
 bank-bill-extractor/
-├── bill_extractor_main.py      # 主程序入口
-├── this_month_bills.py         # 账单提取核心逻辑
-├── bill_storage.py             # 数据持久化存储
-├── openclaw_api.py             # OpenClaw API 接口
-├── email_bill_extractor.py     # 邮件账单提取器
-├── organize_bills.py           # 账单整理工具
-├── reextract_bills.py          # 重新提取工具
 │
-├── scripts/                    # 辅助脚本
-│   ├── encoding_checker.py     # 编码检查
-│   ├── fix_encodings.py        # 编码修复
-│   └── validate_scripts.py     # 脚本验证
+├── .github/workflows/
+│   └── deploy.yml                  # GitHub Actions 工作流（定时 + 部署）
 │
-├── bill_data_history.json      # 历史账单数据
-├── bill_summary.txt            # 文本格式汇总报告
-├── error_log.json              # 错误日志
-├── organized_bills.json        # 整理后的账单
-├── this_month_bills.json       # 本月账单
+├── 核心模块
+│   ├── email_client.py             # IMAP 邮箱连接（含阿里云登录修复）
+│   ├── email_decoder.py            # 邮件 MIME 解码
+│   ├── bank_extractors.py          # 银行账单提取器（策略模式）
+│   ├── this_month_bills.py         # 账单提取核心逻辑
+│   ├── generate_dashboard.py       # 仪表盘 HTML 生成（含滴答清单同步）
+│   ├── config.py                   # 统一配置模块
+│   └── config.example.json         # 配置模板
 │
-├── README.md                   # 本文件
-├── OPENCLAW_INTEGRATION.md     # OpenClaw 集成指南
-├── TICKTICK_GUIDE.md           # TickTick 集成指南
-└── .gitignore                  # Git 忽略文件
+├── 滴答清单集成
+│   ├── ticktick_sync.py            # 滴答清单同步模块
+│   └── daily_run.py                # 每日运行脚本（提取+同步）
+│
+├── 配置文件
+│   ├── requirements.txt            # Python 依赖
+│   ├── .gitignore                  # Git 忽略规则
+│   └── config.json                 # 本地配置（不提交，需自行创建）
+│
+└── 文档
+    ├── README.md                   # 本文件
+    └── TICKTICK_GUIDE.md           # 滴答清单 API 指南
 ```
 
-## 📡 API 端点
+---
 
-系统提供以下 REST API 端点：
+## 🏗️ 架构说明
 
-| 端点 | 方法 | 说明 |
-|------|------|------|
-| `/api/status` | GET | 获取系统状态 |
-| `/api/bills` | GET | 获取最新账单 |
-| `/api/upcoming` | GET | 获取待还款账单 |
-| `/api/report` | GET | 获取文本报告 |
-| `/api/extract` | POST | 触发账单提取 |
-| `/api/errors` | GET | 获取错误日志 |
+### 数据流程
 
-### API 使用示例
+```
+GitHub Actions 定时触发（每天 11:00 / 17:00 北京时间）
+        │
+        ▼
+┌──────────────────────────────────┐
+│  generate_dashboard.py           │
+│  ├─ config.py 读取环境变量/配置   │
+│  ├─ this_month_bills.py          │
+│  │   ├─ email_client.py          │
+│  │   │   └─ IMAP 连接阿里云邮箱   │
+│  │   │   └─ 获取最近 100 封邮件   │
+│  │   ├─ email_decoder.py         │
+│  │   │   └─ MIME 解码邮件内容     │
+│  │   ├─ bank_extractors.py       │
+│  │   │   └─ 识别银行 + 提取金额   │
+│  │   │   └─ 提取还款日            │
+│  │   └─ 筛选未来待还款账单        │
+│  ├─ sync_to_ticktick()           │  ← 滴答清单同步
+│  │   ├─ 清理过期任务（>7天）      │
+│  │   ├─ 按银行创建任务            │
+│  │   └─ 自动去重                  │
+│  └─ 生成 index.html + data.json  │
+└──────────────────────────────────┘
+        │                          │
+        ▼                          ▼
+┌────────────────────┐  ┌────────────────────┐
+│  GitHub Pages 部署  │  │  滴答清单 App       │
+│  └─ 在线仪表盘     │  │  └─ 还款提醒任务    │
+└────────────────────┘  └────────────────────┘
+```
+
+### 关键技术点
+
+#### 阿里云邮箱 IMAP 登录修复
+
+阿里云邮箱的 IMAP 服务器（`imap.aliyun.com`）要求 `LOGIN` 命令的用户名必须用双引号包裹。Python 标准库 `imaplib` 的 `login()` 方法只引用密码不引用用户名，导致 `BAD [b'invalid command or parameters']` 错误。
+
+修复方案见 email_client.py：创建了 `AliyunIMAP4_SSL` 子类，重写 `login()` 方法，使用 `_command` + `_command_complete` 分步调用。
+
+> **关键**：阿里云邮箱用账号密码直接登录，不需要授权码。与 QQ 邮箱/163 邮箱不同。
+
+#### 银行提取器（策略模式）
+
+bank_extractors.py 使用策略模式，每家银行有独立的提取器，支持自定义正则规则和预处理逻辑。添加新银行只需在 `BankExtractorFactory` 注册。
+
+#### 滴答清单同步
+
+generate_dashboard.py 在提取账单后、生成仪表盘前自动调用 `sync_to_ticktick()`。如果未配置 `TICKTICK_API_KEY`，会优雅跳过不影响仪表盘生成。
+
+---
+
+## ⏰ 定时任务说明
+
+GitHub Actions 工作流（.github/workflows/deploy.yml）在以下时间自动运行：
+
+| UTC 时间 | 北京时间 | 说明 |
+|---------|---------|------|
+| `03:00` | `11:00` | 上午检查 |
+| `09:00` | `17:00` | 下午检查 |
+
+也可通过 **Actions → Run workflow** 手动触发。
+
+> **免费额度**：公开仓库 GitHub Actions 完全免费、无限分钟。
+
+---
+
+## 📋 滴答清单集成
+
+项目已集成滴答清单同步功能（ticktick_sync.py），在每次提取账单后自动运行。
+
+### 功能
+
+- ✅ 自动创建"信用卡还款"清单
+- ✅ 按银行创建任务（标题含金额，内容含明细）
+- ✅ 智能优先级：3 天内 = 高，7 天内 = 中，其他 = 低
+- ✅ 到期日提醒：提前 1 天，紧急账单额外提前 2 小时
+- ✅ 自动去重：已存在的任务跳过
+- ✅ 自动清理：超过还款日 7 天的任务自动删除
+
+### API 认证
+
+- API 地址：`https://api.dida365.com/open/v1`
+- 认证方式：Bearer Token（API Key）
+- 获取方式：在 [滴答清单开放平台](https://developer.dida365.com/) 申请
+
+### 配置方式
+
+**GitHub Actions 环境**：将 API Key 添加到 GitHub Secrets（名称：`TICKTICK_API_KEY`）
+
+**本地环境**：在 `config.json` 中添加 `ticktick_api_key` 字段，或设置环境变量 `TICKTICK_API_KEY`
+
+### 本地使用
 
 ```bash
-# 获取系统状态
-curl http://localhost:8765/api/status
+# 预览将要创建的任务（不实际创建）
+python ticktick_sync.py --dry-run
 
-# 获取待还款账单
-curl http://localhost:8765/api/upcoming
+# 正式同步（需要先运行 this_month_bills.py 生成数据）
+python ticktick_sync.py
 
-# 触发账单提取
-curl -X POST http://localhost:8765/api/extract
+# 清理过期任务
+python ticktick_sync.py --cleanup
 
-# 获取文本报告
-curl http://localhost:8765/api/report
+# 完整流程：提取账单 + 生成仪表盘 + 同步滴答清单
+python generate_dashboard.py
 ```
 
-## ⚙️ 配置
+---
 
-### 邮箱配置
+## 🔧 故障排查
 
-在 `this_month_bills.py` 中修改邮箱设置：
+### 1. IMAP 登录失败
 
-```python
-EMAIL_ADDRESS = "your_email@aliyun.com"
-PASSWORD = "your_password"
-IMAP_SERVER = "imap.aliyun.com"
-IMAP_PORT = 993
-```
+| 错误信息 | 原因 | 解决方法 |
+|---------|------|---------|
+| `BAD [b'invalid command or parameters']` | 用户名未引用 | 已在代码中修复，确保使用最新的 `email_client.py` |
+| `LOGIN failed.` | 密码错误或 Secrets 未设置 | 检查 GitHub Secrets 中的 `EMAIL_PASSWORD` |
+| `socket error` | 登录后连接断开 | 已在代码中修复，使用 `_command` + `_command_complete` 分步调用 |
+| 连接超时 | 网络问题或 IMAP 未开启 | 登录阿里云邮箱网页版 → 设置 → POP3/IMAP/SMTP → 开启 IMAP |
 
-### API 端口配置
+### 2. GitHub Pages 显示 ¥0.00
 
-在 `openclaw_api.py` 中修改服务端口：
+检查 Actions 运行日志：
+- 进入 **Actions** 页面
+- 点击最新的运行记录
+- 查看 **Generate dashboard** 步骤的输出
+- 如果显示 `Login successful!` 和 `Extracted N bill emails`，说明提取成功
+- 如果显示错误，根据错误信息排查
 
-```python
-run_server(port=8765)  # 修改端口号
-```
+### 3. 滴答清单同步失败
 
-## ⏰ 定时任务配置
+| 错误信息 | 原因 | 解决方法 |
+|---------|------|---------|
+| `TICKTICK_API_KEY not configured` | 未配置 API Key | 添加 GitHub Secret 或在 config.json 中配置 |
+| `import failed` | requests 库未安装 | 运行 `pip install requests` |
+| `401 Unauthorized` | API Key 无效 | 检查 API Key 是否正确，或重新申请 |
+| `TickTick sync: module not available` | 模块导入失败 | 检查 ticktick_sync.py 是否在项目根目录 |
 
-### Windows 任务计划程序
+### 4. 提取金额为 0
 
-1. 打开"任务计划程序"
-2. 创建基本任务
-3. 设置每天 9:00 执行
-4. 程序：`python.exe`
-5. 参数：`bill_extractor_main.py`
-6. 起始于：`k:\Trae CN\R BANK`
+可能原因：
+- 银行 HTML 模板更新，正则不匹配
+- 邮件编码问题
 
-### Linux Cron
+解决方法：
+- 运行 `python check_all_banks.py` 查看各银行提取情况
+- 更新 bank_extractors.py 中的正则规则
 
-```bash
-crontab -e
-0 9 * * * cd "/path/to/bank-bill-extractor" && python bill_extractor_main.py
-```
+### 5. Actions 未触发
 
-## 🔔 错误通知
+- 确认 `deploy.yml` 在 `.github/workflows/` 目录下
+- 确认仓库 Settings → Actions → General → Actions permissions 允许运行
+- 定时任务可能有几分钟延迟，这是 GitHub 的正常行为
 
-系统支持多种通知方式，在 `openclaw_api.py` 的 `send_notification` 方法中配置：
+---
 
-### 邮件通知
+## 🔒 安全说明
 
-```python
-import smtplib
-from email.mime.text import MIMEText
+### 敏感信息保护
 
-def send_email(error_msg):
-    msg = MIMEText(f"账单提取出错：{error_msg}")
-    msg['Subject'] = '银行账单提取错误'
-    msg['From'] = 'your_email@aliyun.com'
-    msg['To'] = 'your_email@aliyun.com'
-    
-    server = smtplib.SMTP_SSL('smtp.aliyun.com', 465)
-    server.login('your_email@aliyun.com', 'your_password')
-    server.send_message(msg)
-    server.quit()
-```
+- ✅ 邮箱密码通过 GitHub Secrets 加密存储，不会出现在代码中
+- ✅ 滴答清单 API Key 通过 GitHub Secrets 加密存储
+- ✅ `config.json` 在 `.gitignore` 中，不会被提交
+- ✅ `.gitignore` 已配置忽略所有敏感文件（`.env`、`*.key`、`credentials.json` 等）
 
-### 微信通知（Server 酱）
+### 仓库可见性
 
-```python
-import requests
+本仓库为 **公开（public）**，任何人都能看到代码和 Pages 页面。
 
-def send_wechat(error_msg):
-    send_key = 'YOUR_SEND_KEY'
-    url = f'http://sc.ftqq.com/{send_key}.send'
-    data = {'text': '账单提取错误', 'desp': error_msg}
-    requests.post(url, data=data)
-```
+**哪些信息会被公开**：
+- ❌ 不会泄露：邮箱密码、API Key（在 Secrets 中加密）
+- ⚠️ 会公开：银行名称、还款金额、还款日期（在 Pages 仪表盘上）
 
-### 钉钉通知
+如果介意账单数据公开，可选：
+1. 将仓库改为 private（GitHub Pages 对 private 仓库需要 GitHub Pro，$4/月）
+2. 保持现状（金额数据不含姓名、卡号，风险较低）
 
-```python
-import requests
+### 如果 API Key 意外泄露
 
-def send_dingtalk(error_msg):
-    webhook = 'YOUR_DINGTALK_WEBHOOK'
-    data = {'msgtype': 'text', 'text': {'content': error_msg}}
-    requests.post(webhook, json=data)
-```
+1. 立即到对应平台撤销旧 Key，生成新 Key
+2. 更新 GitHub Secrets 中的值
+3. 用 `git filter-repo` 工具清理 git 历史中的泄露内容
+4. Force push 到 GitHub
+5. 删除所有旧的 Actions 运行记录（日志可能包含敏感信息）
+6. 联系 GitHub Support 请求清除缓存的 git 对象
 
-## � 工作流程
+---
 
-```
-1. 连接阿里云邮箱 (IMAP)
-   ↓
-2. 获取邮件 ID 列表
-   ↓
-3. 对比是否有新邮件
-   ├─ 没有新邮件 → 返回"无新邮件"
-   └─ 有新邮件 → 继续
-   ↓
-4. 提取账单信息
-   ├─ HTML 转 Markdown
-   ├─ 识别银行类型
-   ├─ 提取账单金额
-   └─ 提取还款日期
-   ↓
-5. 筛选未来 15 天待还款账单
-   ↓
-6. 保存数据到 JSON 文件
-   ↓
-7. 生成文本格式报告
-   ↓
-8. 返回结果/发送通知
-```
-
-## 🛠️ 故障排查
-
-### 1. 连接邮箱失败
-
-**检查项：**
-- 邮箱账号密码是否正确
-- IMAP 服务是否已开启
-- 网络连接是否正常
-- 防火墙设置
-
-### 2. 提取金额为 0
-
-**可能原因：**
-- 银行 HTML 模板更新
-- 编码问题
-- 正则表达式不匹配
-
-**解决方法：**
-- 查看原始 HTML 文件
-- 更新提取规则
-- 添加新的银行特定处理逻辑
-
-### 3. API 无法访问
-
-**检查项：**
-- 服务器是否运行
-- 端口是否被占用
-- 防火墙设置
-- 使用 `curl http://localhost:8765/api/status` 测试
-
-### 4. JSON 序列化错误
-
-确保所有数据都是可序列化的类型：
-- bytes 类型转 str
-- datetime 类型转字符串
-
-## 📝 最佳实践
-
-1. **每天定时执行** - 设置每天上午 9 点自动检查账单
-2. **监控错误日志** - 定期检查 `error_log.json`
-3. **备份数据** - 定期备份 `bill_data_history.json`
-4. **设置通知阈值** - 超过一定金额才发送通知
-5. **测试新邮件检测** - 确保不会重复处理同一封邮件
-6. **编码统一** - 所有文件使用 UTF-8 编码
-
-## 🔧 扩展功能
+## 📝 开发指南
 
 ### 添加新银行支持
 
-在 `this_month_bills.py` 中添加银行特定的提取规则：
+1. 在 bank_extractors.py 中创建新的提取器类，继承 `BankExtractor`
+2. 实现 `extract_amount()` 和 `extract_due_date()` 方法
+3. 在 `BankExtractorFactory` 中注册
 
 ```python
-if bank_name == '新银行':
-    # 金额提取规则
-    amount_patterns = [
-        r'本期应还款.*?￥([0-9,]+\.?[0-9]*)',
-        r'账单金额.*?CNY([0-9,]+\.?[0-9]*)',
-    ]
-    
-    # 还款日提取规则
-    due_patterns = [
-        r'到期还款日.*?([0-9]{4}年 [0-9]{1,2}月 [0-9]{1,2}日)',
-        r'最后还款日：(\d{4}-\d{2}-\d{2})',
-    ]
+class NewBankExtractor(BankExtractor):
+    def extract_amount(self, text, bill_info):
+        # 金额提取逻辑
+        patterns = [r'本期应还款.*?￥([0-9,]+\.?[0-9]*)']
+        # ...
+
+    def extract_due_date(self, text, bill_info):
+        # 还款日提取逻辑
+        patterns = [r'到期还款日.*?(\d{4}-\d{2}-\d{2})']
+        # ...
 ```
 
-### 自定义报告格式
+4. 在 this_month_bills.py 的 `BANK_MAP` 中添加银行识别关键词
 
-修改 `bill_storage.py` 中的 `generate_text_report` 函数，自定义输出格式。
+### 修改运行频率
 
-### 集成其他通知方式
+编辑 .github/workflows/deploy.yml 中的 `schedule.cron`：
 
-在 `openclaw_api.py` 的 `send_notification` 方法中添加自定义通知逻辑。
+```yaml
+schedule:
+  - cron: '0 3 * * *'   # UTC 时间，北京时间 = UTC + 8
+  - cron: '0 9 * * *'
+```
 
-## 📄 数据文件说明
+### 修改仪表盘样式
 
-### bill_data_history.json
-存储所有历史账单数据和提取记录
+编辑 generate_dashboard.py 中的 `build_html()` 函数。
 
-### bill_summary.txt
-文本格式的汇总报告，可直接阅读
+### 修改滴答清单任务格式
 
-### error_log.json
-错误日志文件，记录所有异常信息
+编辑 ticktick_sync.py 中的 `_build_task()` 方法。
 
-### organized_bills.json
-按银行分类整理的账单数据
+---
 
-### this_month_bills.json
-本月提取的账单数据
+## 📞 参考链接
 
-## 📞 支持
+- 在线仪表盘：https://vrbtc.github.io/bank-bill-extractor/
+- 仓库地址：https://github.com/vrbtc/bank-bill-extractor
+- 滴答清单 API 指南：TICKTICK_GUIDE.md
+- 滴答清单开放平台：https://developer.dida365.com/
 
-如有问题，请查看：
-1. `error_log.json` - 错误日志
-2. `bill_summary.txt` - 最新报告
-3. `OPENCLAW_INTEGRATION.md` - OpenClaw 集成详细文档
-4. `TICKTICK_GUIDE.md` - TickTick 集成指南
+---
 
 ## 📄 License
 
-本系统仅供个人使用，不得用于商业用途。
-
-## 🙏 致谢
-
-感谢使用本系统！如有任何问题或建议，欢迎反馈。
+本系统仅供个人使用。
