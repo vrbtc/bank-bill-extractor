@@ -237,7 +237,7 @@ class FeishuNotifier:
                 continue
             by_offset.setdefault(t["days_offset"], []).append(t)
 
-        offset_label = {0: "今日", 1: "明日", 2: "后天"}
+        offset_label = {0: "今日", 1: "明日", 2: "后天", 3: "大后天"}
         date_by_offset = {off: (now_bj + timedelta(days=off)).strftime("%m-%d") for off in by_offset}
 
         elements = [{

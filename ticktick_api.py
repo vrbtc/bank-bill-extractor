@@ -271,14 +271,17 @@ class TickTickAPI:
         return []
 
     def get_upcoming_tasks(self, days=1, include_overdue=True):
-        """获取未来 N 天代办任务（跨所有项目）
+        """获取未来 N 天代办任务（跨所有项目 + 收集箱）
 
         筛选条件：未完成（status=0）且有 dueDate。
         - 逾期未完成：include_overdue=True 时全部纳入（单独分组）
         - 非逾期：到期日落在 [今天, 今天+days-1] 区间内（含两端）
 
+        注意：滴答清单的"收集箱"（Inbox）不在 /project 列表里，
+        需要用专门的 /project/inbox/data 端点获取，否则会漏任务。
+
         Args:
-            days: 未来天数（含今天）。days=1 仅今天；days=3 = 今天+明天+后天
+            days: 未来天数（含今天）。days=1 仅今天；days=4 = 今天+明天+后天+大后天
             include_overdue: 是否包含已逾期未完成的任务（默认 True）
 
         Returns:
@@ -286,22 +289,12 @@ class TickTickAPI:
             days_offset: 相对今天的天数偏移（0=今天, 1=明天, -1=昨天逾期）
         """
         today_bj = datetime.now(_BJ_TZ).date()
-        projects = self.get_projects()
         result = []
+        max_offset = max(days - 1, 0)  # days=4 → 允许 offset 0,1,2,3
 
-        max_offset = max(days - 1, 0)  # days=3 → 允许 offset 0,1,2
-
-        for p in projects:
-            pid = p.get("id")
-            pname = p.get("name", "")
-            try:
-                resp = self.session.get(f"{BASE_URL}/project/{pid}/data")
-                resp.raise_for_status()
-                data = resp.json()
-            except Exception:
-                continue
-
-            for t in data.get("tasks", []):
+        def _collect_tasks(tasks_iter, project_name, project_id):
+            """内部方法：从任务列表中筛选符合日期范围的任务"""
+            for t in tasks_iter:
                 if t.get("status", 0) != 0:
                     continue  # 跳过已完成
                 due = t.get("dueDate", "")
@@ -325,15 +318,36 @@ class TickTickAPI:
                         continue  # 超出未来 N 天范围，跳过
 
                 result.append({
-                    "title": t.get("title", ""),
-                    "project_name": pname,
-                    "project_id": pid,
+                    "title": t.get("title", "") or "(无标题)",
+                    "project_name": project_name,
+                    "project_id": project_id,
                     "due_date_bj": due_bj_date.isoformat(),
                     "priority": t.get("priority", 0),
                     "is_overdue": is_overdue,
                     "days_offset": offset,
                     "task_id": t.get("id"),
                 })
+
+        # 1. 遍历普通项目（清单）
+        for p in self.get_projects():
+            pid = p.get("id")
+            pname = p.get("name", "")
+            try:
+                resp = self.session.get(f"{BASE_URL}/project/{pid}/data")
+                resp.raise_for_status()
+                data = resp.json()
+            except Exception:
+                continue
+            _collect_tasks(data.get("tasks", []), pname, pid)
+
+        # 2. 遍历收集箱（Inbox）—— 滴答清单的特殊项目，不在 /project 列表里
+        try:
+            resp = self.session.get(f"{BASE_URL}/project/inbox/data")
+            resp.raise_for_status()
+            inbox_data = resp.json()
+            _collect_tasks(inbox_data.get("tasks", []), "收集箱", "inbox")
+        except Exception:
+            pass  # 收集箱获取失败不阻断流程
 
         # 按相对天数升序、优先级降序排序
         result.sort(key=lambda x: (x["days_offset"], -x["priority"], x["project_name"], x["title"]))

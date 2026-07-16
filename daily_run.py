@@ -124,8 +124,8 @@ def run():
         notifier = FeishuNotifier()
         hour_bj = datetime.now(_BJ_TZ).hour
         if hour_bj < 14:
-            days = 3
-            log(f"  模式：上午（北京 {hour_bj} 时）→ 未来 3 天待办")
+            days = 4
+            log(f"  模式：上午（北京 {hour_bj} 时）→ 未来 4 天待办")
         else:
             days = 1
             log(f"  模式：下午（北京 {hour_bj} 时）→ 今日 + 逾期紧急提醒")

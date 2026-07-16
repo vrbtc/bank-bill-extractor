@@ -208,12 +208,12 @@ def push_to_feishu():
     notifier = FeishuNotifier(webhook_url=webhook_url)
 
     # 按北京时间小时区分推送范围：
-    #   上午运行（hour < 14，对应 11:00 cron）→ 推送未来 3 天待办（含今天 + 明天 + 后天）
+    #   上午运行（hour < 14，对应 11:00 cron）→ 推送未来 4 天待办（含今天+明天+后天+大后天）
     #   下午运行（hour >= 14，对应 17:00 cron）→ 只推送今日到期 + 逾期（紧急提醒）
     now_bj_hour = datetime.now(BJ_TZ).hour
     if now_bj_hour < 14:
-        days = 3
-        print(f"  模式：上午（北京 {now_bj_hour} 时）→ 推送未来 3 天待办")
+        days = 4
+        print(f"  模式：上午（北京 {now_bj_hour} 时）→ 推送未来 4 天待办")
     else:
         days = 1
         print(f"  模式：下午（北京 {now_bj_hour} 时）→ 推送今日 + 逾期紧急提醒")
