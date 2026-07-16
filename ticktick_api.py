@@ -270,21 +270,26 @@ class TickTickAPI:
             return self.get_project_tasks(inbox_id)
         return []
 
-    def get_today_tasks(self, include_overdue=True):
-        """获取今日所有代办任务（跨所有项目）
+    def get_upcoming_tasks(self, days=1, include_overdue=True):
+        """获取未来 N 天代办任务（跨所有项目）
 
-        筛选条件：未完成（status=0）且有 dueDate，到期日 <= 今天（北京时间）。
-        账单任务作为代办的一部分自然包含在内。
+        筛选条件：未完成（status=0）且有 dueDate。
+        - 逾期未完成：include_overdue=True 时全部纳入（单独分组）
+        - 非逾期：到期日落在 [今天, 今天+days-1] 区间内（含两端）
 
         Args:
+            days: 未来天数（含今天）。days=1 仅今天；days=3 = 今天+明天+后天
             include_overdue: 是否包含已逾期未完成的任务（默认 True）
 
         Returns:
-            list[dict]，每项含 title/project_name/due_date_bj/priority/is_overdue
+            list[dict]，每项含 title/project_name/due_date_bj/priority/is_overdue/days_offset
+            days_offset: 相对今天的天数偏移（0=今天, 1=明天, -1=昨天逾期）
         """
         today_bj = datetime.now(_BJ_TZ).date()
         projects = self.get_projects()
         result = []
+
+        max_offset = max(days - 1, 0)  # days=3 → 允许 offset 0,1,2
 
         for p in projects:
             pid = p.get("id")
@@ -309,11 +314,15 @@ class TickTickAPI:
                 except Exception:
                     continue
 
-                is_overdue = due_bj_date < today_bj
-                if is_overdue and not include_overdue:
-                    continue
-                if not is_overdue and due_bj_date != today_bj:
-                    continue  # 非今日到期，跳过
+                offset = (due_bj_date - today_bj).days
+                is_overdue = offset < 0
+
+                if is_overdue:
+                    if not include_overdue:
+                        continue
+                else:
+                    if offset > max_offset:
+                        continue  # 超出未来 N 天范围，跳过
 
                 result.append({
                     "title": t.get("title", ""),
@@ -322,12 +331,17 @@ class TickTickAPI:
                     "due_date_bj": due_bj_date.isoformat(),
                     "priority": t.get("priority", 0),
                     "is_overdue": is_overdue,
+                    "days_offset": offset,
                     "task_id": t.get("id"),
                 })
 
-        # 按优先级降序、项目名排序
-        result.sort(key=lambda x: (-x["priority"], x["project_name"], x["title"]))
+        # 按相对天数升序、优先级降序排序
+        result.sort(key=lambda x: (x["days_offset"], -x["priority"], x["project_name"], x["title"]))
         return result
+
+    def get_today_tasks(self, include_overdue=True):
+        """获取今日代办任务（含逾期）。days=1 的快捷方式。"""
+        return self.get_upcoming_tasks(days=1, include_overdue=include_overdue)
 
 
 if __name__ == "__main__":

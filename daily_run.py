@@ -5,8 +5,11 @@ import json
 import sys
 import os
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
+
+# 北京时区
+_BJ_TZ = timezone(timedelta(hours=8))
 
 SCRIPT_DIR = Path(__file__).parent
 LOG_FILE = SCRIPT_DIR / "daily_run.log"
@@ -112,13 +115,21 @@ def run():
         log(f"WARN: 滴答清单同步失败 - {e}")
         traceback.print_exc()
 
-    # Step 4: 推送今日所有代办到飞书群（不限于账单）
-    log("Step 4: 推送今日代办到飞书群...")
+    # Step 4: 推送代办到飞书群（不限于账单）
+    # 按北京时间小时区分：上午(<14)推未来3天，下午(>=14)推今日+逾期
+    log("Step 4: 推送代办到飞书群...")
     try:
         from feishu_notify import FeishuNotifier
 
         notifier = FeishuNotifier()
-        result = notifier.send_today_tasks()
+        hour_bj = datetime.now(_BJ_TZ).hour
+        if hour_bj < 14:
+            days = 3
+            log(f"  模式：上午（北京 {hour_bj} 时）→ 未来 3 天待办")
+        else:
+            days = 1
+            log(f"  模式：下午（北京 {hour_bj} 时）→ 今日 + 逾期紧急提醒")
+        result = notifier.send_today_tasks(days=days)
         log(f"  OK: 飞书推送成功 - {result.get('StatusMessage', 'done')}")
     except Exception as e:
         log(f"WARN: 飞书推送失败 - {e}")

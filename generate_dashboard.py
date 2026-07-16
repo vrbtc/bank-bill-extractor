@@ -204,9 +204,21 @@ def push_to_feishu():
         print('Feishu push: TICKTICK_API_KEY not configured, cannot fetch today tasks, skipping')
         return
 
-    print('\n--- Feishu Push (今日所有代办) ---')
+    print('\n--- Feishu Push (代办提醒) ---')
     notifier = FeishuNotifier(webhook_url=webhook_url)
-    result = notifier.send_today_tasks(api_key=api_key)
+
+    # 按北京时间小时区分推送范围：
+    #   上午运行（hour < 14，对应 11:00 cron）→ 推送未来 3 天待办（含今天 + 明天 + 后天）
+    #   下午运行（hour >= 14，对应 17:00 cron）→ 只推送今日到期 + 逾期（紧急提醒）
+    now_bj_hour = datetime.now(BJ_TZ).hour
+    if now_bj_hour < 14:
+        days = 3
+        print(f"  模式：上午（北京 {now_bj_hour} 时）→ 推送未来 3 天待办")
+    else:
+        days = 1
+        print(f"  模式：下午（北京 {now_bj_hour} 时）→ 推送今日 + 逾期紧急提醒")
+
+    result = notifier.send_today_tasks(api_key=api_key, days=days)
     print(f"  Push result: {result.get('StatusMessage', result)}")
     print('--- Feishu Push Done ---\n')
 

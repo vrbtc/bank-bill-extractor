@@ -189,14 +189,16 @@ class FeishuNotifier:
                 })
         return result
 
-    def send_today_tasks(self, api_key=None, dry_run=False):
-        """推送今日所有代办事项到飞书群（不限于账单）
+    def send_today_tasks(self, api_key=None, days=1, dry_run=False):
+        """推送代办事项汇总到飞书群（不限于账单）
 
-        从滴答清单拉取所有项目中今日到期 + 已逾期未完成的任务，
-        按优先级和逾期状态分组后推送一条卡片消息。
+        从滴答清单拉取所有项目中未来 `days` 天（含今天）到期 + 已逾期未完成的任务，
+        按相对天数分组后推送一条卡片消息。
 
         Args:
             api_key: 滴答清单 API key（不传则从环境变量/config 读取）
+            days: 未来天数（含今天）。days=1 仅今天+逾期（用于下午紧急提醒）；
+                  days=3 = 今天+明天+后天+逾期（用于早上的未来3天概览）
             dry_run: True 时只返回构建的 payload 不实际发送（用于本地验证）
 
         Returns:
@@ -206,32 +208,45 @@ class FeishuNotifier:
         from datetime import datetime, timezone, timedelta
 
         bj_tz = timezone(timedelta(hours=8))
-        today_str = datetime.now(bj_tz).strftime("%Y-%m-%d")
+        now_bj = datetime.now(bj_tz)
+        today_str = now_bj.strftime("%Y-%m-%d")
 
         api = TickTickAPI(api_key=api_key)
-        tasks = api.get_today_tasks(include_overdue=True)
+        tasks = api.get_upcoming_tasks(days=days, include_overdue=True)
+
+        # 标题与文案
+        if days <= 1:
+            title_label = "今日待办提醒"
+            empty_text = f"📅 {today_str} 今日待办\n\n今日暂无待办事项，享受一天吧 ✨"
+        else:
+            end_date = (now_bj + timedelta(days=days - 1)).strftime("%Y-%m-%d")
+            title_label = f"未来 {days} 天待办提醒"
+            empty_text = f"📅 {today_str} ~ {end_date}\n\n未来 {days} 天暂无待办事项 ✨"
 
         if not tasks:
-            payload = {
-                "msg_type": "text",
-                "content": {"text": f"📅 {today_str} 今日待办\n\n今日暂无待办事项，享受一天吧 ✨"}
-            }
+            payload = {"msg_type": "text", "content": {"text": empty_text}}
             if dry_run:
                 return payload
             return self._send(payload)
 
+        # 分组：逾期 / 今天(offset=0) / 明天(1) / 后天(2) ...
         overdue = [t for t in tasks if t["is_overdue"]]
-        today_tasks = [t for t in tasks if not t["is_overdue"]]
+        by_offset = {}
+        for t in tasks:
+            if t["is_overdue"]:
+                continue
+            by_offset.setdefault(t["days_offset"], []).append(t)
 
-        elements = []
-        elements.append({
+        offset_label = {0: "今日", 1: "明日", 2: "后天"}
+        date_by_offset = {off: (now_bj + timedelta(days=off)).strftime("%m-%d") for off in by_offset}
+
+        elements = [{
             "tag": "div",
             "text": {
                 "tag": "lark_md",
-                "content": f"**📅 今日待办提醒**\n{today_str}（北京时间）"
+                "content": f"**📅 {title_label}**\n{today_str}（北京时间）"
             }
-        })
-        elements.append({"tag": "hr"})
+        }, {"tag": "hr"}]
 
         # 逾期未完成
         if overdue:
@@ -239,29 +254,28 @@ class FeishuNotifier:
             for t in overdue:
                 p_mark = {"5": "🔥", "3": "⚠️", "1": "📝"}.get(str(t["priority"]), "")
                 lines.append(f"• {p_mark} {t['title']}（{t['project_name']}，应于 {t['due_date_bj']}）")
-            elements.append({
-                "tag": "div",
-                "text": {"tag": "lark_md", "content": "\n".join(lines)}
-            })
+            elements.append({"tag": "div", "text": {"tag": "lark_md", "content": "\n".join(lines)}})
 
-        # 今日到期
-        if today_tasks:
-            lines = [f"**📋 今日到期（{len(today_tasks)} 项）**"]
-            for t in today_tasks:
+        # 按天分组（今天、明天、后天...）
+        for offset in sorted(by_offset.keys()):
+            day_tasks = by_offset[offset]
+            label = offset_label.get(offset, f"{offset}天后")
+            date_str = date_by_offset[offset]
+            lines = [f"**📋 {label}到期（{len(day_tasks)} 项 · {date_str}）**"]
+            for t in day_tasks:
                 p_mark = {"5": "🔥", "3": "⚠️", "1": "📝"}.get(str(t["priority"]), "")
                 lines.append(f"• {p_mark} {t['title']}（{t['project_name']}）")
-            elements.append({
-                "tag": "div",
-                "text": {"tag": "lark_md", "content": "\n".join(lines)}
-            })
+            elements.append({"tag": "div", "text": {"tag": "lark_md", "content": "\n".join(lines)}})
 
         # 汇总
+        today_count = len(by_offset.get(0, []))
+        upcoming_count = sum(len(v) for k, v in by_offset.items() if k > 0)
         elements.append({"tag": "hr"})
         elements.append({
             "tag": "div",
             "text": {
                 "tag": "lark_md",
-                "content": f"**共 {len(tasks)} 项待办**（逾期 {len(overdue)}，今日 {len(today_tasks)}）\n更新时间：{today_str}"
+                "content": f"**共 {len(tasks)} 项待办**（逾期 {len(overdue)}，今日 {today_count}，未来 {upcoming_count}）\n更新时间：{today_str}"
             }
         })
 
@@ -269,11 +283,8 @@ class FeishuNotifier:
             "msg_type": "interactive",
             "card": {
                 "header": {
-                    "title": {
-                        "tag": "plain_text",
-                        "content": "📅 今日待办提醒"
-                    },
-                    "template": "red" if overdue else ("orange" if today_tasks else "blue")
+                    "title": {"tag": "plain_text", "content": f"📅 {title_label}"},
+                    "template": "red" if overdue else ("orange" if by_offset else "blue")
                 },
                 "elements": elements
             }
