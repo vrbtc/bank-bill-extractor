@@ -30,8 +30,12 @@
 import json
 import os
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+
+# 北京时区（UTC+8）
+_BJ_TZ = timezone(timedelta(hours=8))
 
 
 BASE_URL = "https://api.dida365.com/open/v1"
@@ -265,6 +269,65 @@ class TickTickAPI:
         if inbox_id:
             return self.get_project_tasks(inbox_id)
         return []
+
+    def get_today_tasks(self, include_overdue=True):
+        """获取今日所有代办任务（跨所有项目）
+
+        筛选条件：未完成（status=0）且有 dueDate，到期日 <= 今天（北京时间）。
+        账单任务作为代办的一部分自然包含在内。
+
+        Args:
+            include_overdue: 是否包含已逾期未完成的任务（默认 True）
+
+        Returns:
+            list[dict]，每项含 title/project_name/due_date_bj/priority/is_overdue
+        """
+        today_bj = datetime.now(_BJ_TZ).date()
+        projects = self.get_projects()
+        result = []
+
+        for p in projects:
+            pid = p.get("id")
+            pname = p.get("name", "")
+            try:
+                resp = self.session.get(f"{BASE_URL}/project/{pid}/data")
+                resp.raise_for_status()
+                data = resp.json()
+            except Exception:
+                continue
+
+            for t in data.get("tasks", []):
+                if t.get("status", 0) != 0:
+                    continue  # 跳过已完成
+                due = t.get("dueDate", "")
+                if not due:
+                    continue  # 无到期日，跳过
+
+                try:
+                    due_utc = datetime.strptime(due[:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc)
+                    due_bj_date = due_utc.astimezone(_BJ_TZ).date()
+                except Exception:
+                    continue
+
+                is_overdue = due_bj_date < today_bj
+                if is_overdue and not include_overdue:
+                    continue
+                if not is_overdue and due_bj_date != today_bj:
+                    continue  # 非今日到期，跳过
+
+                result.append({
+                    "title": t.get("title", ""),
+                    "project_name": pname,
+                    "project_id": pid,
+                    "due_date_bj": due_bj_date.isoformat(),
+                    "priority": t.get("priority", 0),
+                    "is_overdue": is_overdue,
+                    "task_id": t.get("id"),
+                })
+
+        # 按优先级降序、项目名排序
+        result.sort(key=lambda x: (-x["priority"], x["project_name"], x["title"]))
+        return result
 
 
 if __name__ == "__main__":

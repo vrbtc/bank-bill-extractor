@@ -112,13 +112,13 @@ def run():
         log(f"WARN: 滴答清单同步失败 - {e}")
         traceback.print_exc()
 
-    # Step 4: 推送到飞书群
-    log("Step 4: 推送账单汇总到飞书群...")
+    # Step 4: 推送今日所有代办到飞书群（不限于账单）
+    log("Step 4: 推送今日代办到飞书群...")
     try:
         from feishu_notify import FeishuNotifier
 
         notifier = FeishuNotifier()
-        result = notifier.send_bills_summary(data_to_save)
+        result = notifier.send_today_tasks()
         log(f"  OK: 飞书推送成功 - {result.get('StatusMessage', 'done')}")
     except Exception as e:
         log(f"WARN: 飞书推送失败 - {e}")

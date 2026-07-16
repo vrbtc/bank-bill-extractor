@@ -4,7 +4,10 @@ import json
 import os
 import sys
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+# 北京时区（UTC+8），用于 generated_at 显示，避免 GitHub Actions runner 的 UTC 误读
+BJ_TZ = timezone(timedelta(hours=8))
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -34,14 +37,14 @@ def generate_dashboard():
         except Exception as e:
             print(f'TickTick sync warning: {e}')
 
-    # Push to Feishu group (optional, won't fail the build if errors occur)
-    if bills and not extract_error:
-        try:
-            push_to_feishu(bills)
-        except Exception as e:
-            print(f'Feishu push warning: {e}')
+    # Push today's all TickTick tasks to Feishu group (optional, won't fail the build if errors occur)
+    # 注意：现在推送的是今日所有代办（从 TickTick 拉取），不再依赖账单数据
+    try:
+        push_to_feishu()
+    except Exception as e:
+        print(f'Feishu push warning: {e}')
 
-    now = datetime.now()
+    now = datetime.now(BJ_TZ)  # 北京时间，避免 runner UTC
     all_upcoming = get_upcoming_bills(bills, days=None)
     upcoming_15 = get_upcoming_bills(bills, days=15)
     upcoming_7 = get_upcoming_bills(bills, days=7)
@@ -137,7 +140,7 @@ def sync_to_ticktick(bills):
     sync = TickTickSync(api_key=api_key)
 
     bills_data = {
-        'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'generated_at': datetime.now(BJ_TZ).strftime('%Y-%m-%d %H:%M:%S'),
         'bills': bills
     }
 
@@ -168,26 +171,42 @@ def sync_to_ticktick(bills):
     print('--- TickTick Sync Done ---\n')
 
 
-def push_to_feishu(bills):
-    """Push bills summary to Feishu group. Optional - won't fail the build if errors occur."""
+def push_to_feishu():
+    """Push today's all TickTick tasks to Feishu group.
+
+    现在推送的是今日所有代办（从 TickTick 拉取），不再仅是账单汇总。
+    账单任务作为代办的一部分自然包含在内。
+    需要 TICKTICK_API_KEY 和 FEISHU_WEBHOOK_URL。
+    """
     try:
         from feishu_notify import FeishuNotifier
     except Exception as e:
         print(f'Feishu push: import failed ({e}), skipping')
         return
 
-    # webhook URL can be overridden via env var, otherwise uses default
-    webhook_url = os.environ.get('FEISHU_WEBHOOK_URL', '')
+    webhook_url = os.environ.get('FEISHU_WEBHOOK_URL', '').strip()
+    if not webhook_url:
+        print('Feishu push: FEISHU_WEBHOOK_URL not configured, skipping')
+        return
 
-    print('\n--- Feishu Push ---')
-    notifier = FeishuNotifier(webhook_url=webhook_url if webhook_url else None)
+    # 需要 TICKTICK_API_KEY 来拉取今日代办
+    api_key = os.environ.get('TICKTICK_API_KEY', '').strip()
+    if not api_key:
+        config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    api_key = json.load(f).get('ticktick_api_key', '').strip()
+            except Exception:
+                pass
 
-    bills_data = {
-        'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        'bills': bills
-    }
+    if not api_key:
+        print('Feishu push: TICKTICK_API_KEY not configured, cannot fetch today tasks, skipping')
+        return
 
-    result = notifier.send_bills_summary(bills_data)
+    print('\n--- Feishu Push (今日所有代办) ---')
+    notifier = FeishuNotifier(webhook_url=webhook_url)
+    result = notifier.send_today_tasks(api_key=api_key)
     print(f"  Push result: {result.get('StatusMessage', result)}")
     print('--- Feishu Push Done ---\n')
 
@@ -259,7 +278,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Ping
 <div class="container">
   <div class="header">
     <h1>&#x1F3E6; 银行账单仪表盘</h1>
-    <div class="subtitle">自动从邮箱提取，实时查看待还款账单</div>
+    <div class="subtitle">定时从邮箱提取（每日 11:00 / 17:00 北京时间），查看待还款账单</div>
     <div class="update-time" id="updateTime"></div>
   </div>
   <div id="errorBanner"></div>
@@ -276,7 +295,7 @@ const DATA = ''' + data_json + ''';
 function fmt(n) { return "\u00A5" + n.toLocaleString("zh-CN", {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
 
 function render() {
-  document.getElementById("updateTime").textContent = "更新时间：" + DATA.generated_at;
+  document.getElementById("updateTime").textContent = "更新时间：" + DATA.generated_at + "（北京时间）";
 
   if (DATA.extract_error) {
     document.getElementById("errorBanner").innerHTML = '<div class="error-banner">\u26A0\uFE0F 上次提取出现错误：' + DATA.extract_error + '</div>';

@@ -189,6 +189,100 @@ class FeishuNotifier:
                 })
         return result
 
+    def send_today_tasks(self, api_key=None, dry_run=False):
+        """推送今日所有代办事项到飞书群（不限于账单）
+
+        从滴答清单拉取所有项目中今日到期 + 已逾期未完成的任务，
+        按优先级和逾期状态分组后推送一条卡片消息。
+
+        Args:
+            api_key: 滴答清单 API key（不传则从环境变量/config 读取）
+            dry_run: True 时只返回构建的 payload 不实际发送（用于本地验证）
+
+        Returns:
+            dry_run=True 时返回 payload dict；否则返回飞书响应。
+        """
+        from ticktick_api import TickTickAPI
+        from datetime import datetime, timezone, timedelta
+
+        bj_tz = timezone(timedelta(hours=8))
+        today_str = datetime.now(bj_tz).strftime("%Y-%m-%d")
+
+        api = TickTickAPI(api_key=api_key)
+        tasks = api.get_today_tasks(include_overdue=True)
+
+        if not tasks:
+            payload = {
+                "msg_type": "text",
+                "content": {"text": f"📅 {today_str} 今日待办\n\n今日暂无待办事项，享受一天吧 ✨"}
+            }
+            if dry_run:
+                return payload
+            return self._send(payload)
+
+        overdue = [t for t in tasks if t["is_overdue"]]
+        today_tasks = [t for t in tasks if not t["is_overdue"]]
+
+        elements = []
+        elements.append({
+            "tag": "div",
+            "text": {
+                "tag": "lark_md",
+                "content": f"**📅 今日待办提醒**\n{today_str}（北京时间）"
+            }
+        })
+        elements.append({"tag": "hr"})
+
+        # 逾期未完成
+        if overdue:
+            lines = [f"**🔴 逾期未完成（{len(overdue)} 项）**"]
+            for t in overdue:
+                p_mark = {"5": "🔥", "3": "⚠️", "1": "📝"}.get(str(t["priority"]), "")
+                lines.append(f"• {p_mark} {t['title']}（{t['project_name']}，应于 {t['due_date_bj']}）")
+            elements.append({
+                "tag": "div",
+                "text": {"tag": "lark_md", "content": "\n".join(lines)}
+            })
+
+        # 今日到期
+        if today_tasks:
+            lines = [f"**📋 今日到期（{len(today_tasks)} 项）**"]
+            for t in today_tasks:
+                p_mark = {"5": "🔥", "3": "⚠️", "1": "📝"}.get(str(t["priority"]), "")
+                lines.append(f"• {p_mark} {t['title']}（{t['project_name']}）")
+            elements.append({
+                "tag": "div",
+                "text": {"tag": "lark_md", "content": "\n".join(lines)}
+            })
+
+        # 汇总
+        elements.append({"tag": "hr"})
+        elements.append({
+            "tag": "div",
+            "text": {
+                "tag": "lark_md",
+                "content": f"**共 {len(tasks)} 项待办**（逾期 {len(overdue)}，今日 {len(today_tasks)}）\n更新时间：{today_str}"
+            }
+        })
+
+        payload = {
+            "msg_type": "interactive",
+            "card": {
+                "header": {
+                    "title": {
+                        "tag": "plain_text",
+                        "content": "📅 今日待办提醒"
+                    },
+                    "template": "red" if overdue else ("orange" if today_tasks else "blue")
+                },
+                "elements": elements
+            }
+        }
+
+        if dry_run:
+            return payload
+        return self._send(payload)
+
 
 if __name__ == "__main__":
     import sys
