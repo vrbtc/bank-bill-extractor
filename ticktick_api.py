@@ -211,7 +211,7 @@ class TickTickAPI:
                     content=None, priority=None, status=None, due_hour=11,
                     reminders=None, is_all_day=None):
         """更新任务信息"""
-        task = {}
+        task = {"id": task_id}
 
         if project_id:
             task["projectId"] = project_id

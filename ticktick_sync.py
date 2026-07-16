@@ -145,6 +145,7 @@ class TickTickSync:
                 try:
                     self.api.update_task(
                         existing["id"],
+                        project_id=existing.get("projectId", project_id),
                         due_date=task["due_date"],
                         priority=task["priority"],
                         due_hour=task.get("due_hour", 11),
@@ -153,6 +154,7 @@ class TickTickSync:
                     )
                     updated.append({"bank": bank, "task_id": existing["id"], "title": task["title"]})
                 except Exception as e:
+                    print(f"  Update failed for {bank}: {e}")
                     skipped.append({"bank": bank, "reason": f"更新失败: {e}"})
                 continue
 
