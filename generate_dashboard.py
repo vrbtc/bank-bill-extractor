@@ -153,6 +153,7 @@ def sync_to_ticktick(bills):
     if result.get('success'):
         print(f"  Created: {result['total_created']} tasks")
         print(f"  Skipped: {result['total_skipped']} (already exist)")
+        print(f"  Updated: {result.get('total_updated', 0)} (reminder time fix)")
         if result.get('errors'):
             print(f"  Errors: {result['errors']}")
         for c in result.get('created', []):
@@ -160,6 +161,8 @@ def sync_to_ticktick(bills):
                 print(f"    + {c['title']}")
             else:
                 print(f"    ! {c['bank']}: {c['error']}")
+        for u in result.get('updated', []):
+            print(f"    ↻ {u['title']} (reminder updated)")
     else:
         print(f"  Sync info: {result.get('message', 'unknown')}")
     print('--- TickTick Sync Done ---\n')

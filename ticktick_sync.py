@@ -124,10 +124,11 @@ class TickTickSync:
 
         project_id = self.api.find_or_create_project(project_name)
         existing_tasks = self.api.get_project_tasks(project_id)
-        existing_titles = {t["title"] for t in existing_tasks}
+        existing_map = {t["title"]: t for t in existing_tasks}
 
         created = []
         skipped = []
+        updated = []
         for bank, info in sorted(upcoming.items(), key=lambda x: x[1]["days_until"]):
             if info["total_amount"] <= 0:
                 continue
@@ -138,8 +139,30 @@ class TickTickSync:
                 info["details"]
             )
 
-            if task["title"] in existing_titles:
-                skipped.append({"bank": bank, "reason": "已存在"})
+            if task["title"] in existing_map:
+                existing = existing_map[task["title"]]
+                old_due = existing.get("dueDate", "")
+                # 检测旧任务是否使用午夜时间（UTC 16:00 = 北京 00:00）或 isAllDay
+                needs_update = (
+                    existing.get("isAllDay", False) or
+                    (old_due and old_due[11:13] == "16") or  # 16:xx UTC = 00:xx 北京
+                    not existing.get("reminders")
+                )
+                if needs_update:
+                    try:
+                        self.api.update_task(
+                            existing["id"],
+                            due_date=task["due_date"],
+                            priority=task["priority"],
+                            due_hour=task.get("due_hour", 11),
+                            reminders=task["reminders"],
+                            is_all_day=False
+                        )
+                        updated.append({"bank": bank, "task_id": existing["id"], "title": task["title"]})
+                    except Exception as e:
+                        skipped.append({"bank": bank, "reason": f"更新失败: {e}"})
+                else:
+                    skipped.append({"bank": bank, "reason": "已存在"})
                 continue
 
             try:
@@ -168,8 +191,10 @@ class TickTickSync:
             "project_name": project_name,
             "created": created,
             "skipped": skipped,
+            "updated": updated,
             "total_created": len([c for c in created if "error" not in c]),
             "total_skipped": len(skipped),
+            "total_updated": len(updated),
             "errors": len([c for c in created if "error" in c])
         }
 

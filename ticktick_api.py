@@ -208,7 +208,8 @@ class TickTickAPI:
         return resp.json()
 
     def update_task(self, task_id, project_id=None, title=None, due_date=None,
-                    content=None, priority=None, status=None, due_hour=11):
+                    content=None, priority=None, status=None, due_hour=11,
+                    reminders=None, is_all_day=None):
         """更新任务信息"""
         task = {}
 
@@ -224,8 +225,12 @@ class TickTickAPI:
             task["priority"] = priority
         if status is not None:
             task["status"] = status
+        if reminders is not None:
+            task["reminders"] = reminders
+        if is_all_day is not None:
+            task["isAllDay"] = is_all_day
 
-        resp = self.session.put(f"{BASE_URL}/task/{task_id}", json=task)
+        resp = self.session.post(f"{BASE_URL}/task/{task_id}", json=task)
         resp.raise_for_status()
         return resp.json()
 
