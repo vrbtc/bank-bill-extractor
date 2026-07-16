@@ -141,28 +141,19 @@ class TickTickSync:
 
             if task["title"] in existing_map:
                 existing = existing_map[task["title"]]
-                old_due = existing.get("dueDate", "")
-                # 检测旧任务是否使用午夜时间（UTC 16:00 = 北京 00:00）或 isAllDay
-                needs_update = (
-                    existing.get("isAllDay", False) or
-                    (old_due and old_due[11:13] == "16") or  # 16:xx UTC = 00:xx 北京
-                    not existing.get("reminders")
-                )
-                if needs_update:
-                    try:
-                        self.api.update_task(
-                            existing["id"],
-                            due_date=task["due_date"],
-                            priority=task["priority"],
-                            due_hour=task.get("due_hour", 11),
-                            reminders=task["reminders"],
-                            is_all_day=False
-                        )
-                        updated.append({"bank": bank, "task_id": existing["id"], "title": task["title"]})
-                    except Exception as e:
-                        skipped.append({"bank": bank, "reason": f"更新失败: {e}"})
-                else:
-                    skipped.append({"bank": bank, "reason": "已存在"})
+                # 总是更新已存在任务的 dueDate/reminders，确保提醒时间正确（修复旧午夜提醒）
+                try:
+                    self.api.update_task(
+                        existing["id"],
+                        due_date=task["due_date"],
+                        priority=task["priority"],
+                        due_hour=task.get("due_hour", 11),
+                        reminders=task["reminders"],
+                        is_all_day=False
+                    )
+                    updated.append({"bank": bank, "task_id": existing["id"], "title": task["title"]})
+                except Exception as e:
+                    skipped.append({"bank": bank, "reason": f"更新失败: {e}"})
                 continue
 
             try:
