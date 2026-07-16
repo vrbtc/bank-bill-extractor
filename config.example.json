@@ -2,5 +2,7 @@
   "email_address": "y***@aliyun.com",
   "email_password": "your_password_here",
   "imap_server": "imap.aliyun.com",
-  "imap_port": 993
+  "imap_port": 993,
+  "ticktick_api_key": "dp_your_api_key_here",
+  "feishu_webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/your_hook_id"
 }

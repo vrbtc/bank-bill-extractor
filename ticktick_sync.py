@@ -12,86 +12,24 @@
 - 自动去重（已存在的任务跳过）
 - 自动清理过期任务（超过还款日7天的删除）
 
-API Key 配置：
-- 环境变量 TICKTICK_API_KEY（推荐，CI 环境）
-- config.json 中的 ticktick_api_key（本地运行）
+依赖：ticktick_api.py（纯 API 封装）
 """
 
 import json
 import os
-import requests
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
+
+from ticktick_api import TickTickAPI
 
 
 SCRIPT_DIR = Path(__file__).parent
-BASE_URL = "https://api.dida365.com/open/v1"
 SYNC_STATE_FILE = SCRIPT_DIR / "ticktick_sync_state.json"
-
-
-def _load_api_key():
-    """从环境变量或 config.json 读取 API Key"""
-    # 1. 环境变量优先（CI 环境）
-    api_key = os.environ.get('TICKTICK_API_KEY', '')
-    if api_key:
-        return api_key.strip()
-
-    # 2. 回退到 config.json（本地运行）
-    config_path = SCRIPT_DIR / 'config.json'
-    if config_path.exists():
-        try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-                return config.get('ticktick_api_key', '').strip()
-        except Exception:
-            pass
-
-    return ''
 
 
 class TickTickSync:
     def __init__(self, api_key=None):
-        self.api_key = api_key or _load_api_key()
-        if not self.api_key:
-            raise ValueError(
-                "TICKTICK_API_KEY not found. "
-                "Set environment variable TICKTICK_API_KEY or add 'ticktick_api_key' to config.json"
-            )
-        self.session = requests.Session()
-        self.session.headers.update({
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        })
-
-    def get_projects(self):
-        resp = self.session.get(f"{BASE_URL}/project")
-        resp.raise_for_status()
-        return resp.json()
-
-    def find_or_create_project(self, name="信用卡还款"):
-        projects = self.get_projects()
-        for p in projects:
-            if p["name"] == name:
-                return p["id"]
-
-        resp = self.session.post(f"{BASE_URL}/project", json={
-            "name": name,
-            "kind": "TASK",
-            "viewMode": "list"
-        })
-        resp.raise_for_status()
-        return resp.json()["id"]
-
-    def get_project_tasks(self, project_id):
-        resp = self.session.get(f"{BASE_URL}/project/{project_id}/data")
-        resp.raise_for_status()
-        data = resp.json()
-        return data.get("tasks", [])
-
-    def _bj_to_utc(self, date_str):
-        bj_time = datetime.strptime(date_str, "%Y-%m-%d")
-        utc_time = bj_time - timedelta(hours=8)
-        return utc_time.strftime("%Y-%m-%dT%H:%M:%S.000+0000")
+        self.api = TickTickAPI(api_key=api_key)
 
     def _calc_priority(self, days_until):
         if days_until <= 3:
@@ -103,7 +41,6 @@ class TickTickSync:
 
     def _build_task(self, bank, amount, due_date, days_until, bill_details=None):
         priority = self._calc_priority(days_until)
-        utc_due = self._bj_to_utc(due_date)
 
         content_parts = [f"还款金额：¥{amount:,.2f}", f"还款日：{due_date}（{days_until}天后）"]
         if bill_details:
@@ -112,16 +49,19 @@ class TickTickSync:
             for detail in bill_details:
                 content_parts.append(f"  • {detail['subject']}: ¥{detail['amount']:,.2f}")
 
-        reminders = ["TRIGGER:-P1D"]
+        # 到期时间设为上午 11:00（北京时间），isAllDay=False
+        # 提前提醒：TRIGGER:-PT18H → 前 18 小时 = 前一天下午 5 点
+        # 当天提醒：TRIGGER:PT0M   → 到期时刻 = 当天上午 11 点
+        # 紧急账单（≤3天）额外加当天 11 点提醒
+        reminders = ["TRIGGER:-PT18H"]
         if days_until <= 3:
-            reminders.append("TRIGGER:-PT2H")
+            reminders.append("TRIGGER:PT0M")
 
         return {
             "title": f"💳 {bank}信用卡还款 ¥{amount:,.2f}",
             "content": "\n".join(content_parts),
-            "dueDate": utc_due,
-            "timeZone": "Asia/Shanghai",
-            "isAllDay": False,
+            "due_date": due_date,
+            "due_hour": 11,
             "priority": priority,
             "reminders": reminders
         }
@@ -182,8 +122,8 @@ class TickTickSync:
                     tasks.append(task)
             return {"success": True, "dry_run": True, "tasks": tasks, "count": len(tasks)}
 
-        project_id = self.find_or_create_project(project_name)
-        existing_tasks = self.get_project_tasks(project_id)
+        project_id = self.api.find_or_create_project(project_name)
+        existing_tasks = self.api.get_project_tasks(project_id)
         existing_titles = {t["title"] for t in existing_tasks}
 
         created = []
@@ -202,19 +142,23 @@ class TickTickSync:
                 skipped.append({"bank": bank, "reason": "已存在"})
                 continue
 
-            if not dry_run:
-                try:
-                    task["projectId"] = project_id
-                    resp = self.session.post(f"{BASE_URL}/task", json=task)
-                    resp.raise_for_status()
-                    result = resp.json()
-                    created.append({
-                        "bank": bank,
-                        "task_id": result.get("id"),
-                        "title": task["title"]
-                    })
-                except Exception as e:
-                    created.append({"bank": bank, "error": str(e)})
+            try:
+                result = self.api.create_task(
+                    project_id,
+                    title=task["title"],
+                    due_date=task["due_date"],
+                    content=task["content"],
+                    priority=task["priority"],
+                    reminders=task["reminders"],
+                    due_hour=task.get("due_hour", 11)
+                )
+                created.append({
+                    "bank": bank,
+                    "task_id": result.get("id"),
+                    "title": task["title"]
+                })
+            except Exception as e:
+                created.append({"bank": bank, "error": str(e)})
 
         self._save_sync_state(created, skipped)
 
@@ -240,7 +184,7 @@ class TickTickSync:
             with open(SYNC_STATE_FILE, "w", encoding="utf-8") as f:
                 json.dump(state, f, ensure_ascii=False, indent=2)
         except Exception:
-            pass  # CI 环境可能无法写入
+            pass
 
     def load_sync_state(self):
         if SYNC_STATE_FILE.exists():
@@ -249,8 +193,8 @@ class TickTickSync:
         return None
 
     def cleanup_old_tasks(self, project_name="信用卡还款"):
-        project_id = self.find_or_create_project(project_name)
-        tasks = self.get_project_tasks(project_id)
+        project_id = self.api.find_or_create_project(project_name)
+        tasks = self.api.get_project_tasks(project_id)
         today = datetime.now()
         deleted = 0
 
@@ -260,11 +204,7 @@ class TickTickSync:
                 try:
                     due_date = datetime.strptime(due_date_str[:10], "%Y-%m-%d")
                     if (today - due_date).days > 7:
-                        resp = self.session.delete(
-                            f"{BASE_URL}/task/{task['id']}",
-                            params={"projectId": project_id}
-                        )
-                        if resp.status_code == 200:
+                        if self.api.delete_task(task["id"]):
                             deleted += 1
                 except:
                     pass
@@ -294,7 +234,7 @@ if __name__ == "__main__":
         print(f"📋 预览模式 - 将创建 {result['count']} 个任务：\n")
         for task in result["tasks"]:
             print(f"  {task['title']}")
-            print(f"    优先级: {task['priority']}, 到期: {task['dueDate']}")
+            print(f"    优先级: {task['priority']}, 到期: {task['due_date']}")
             print()
     elif len(sys.argv) > 1 and sys.argv[1] == "--cleanup":
         result = sync.cleanup_old_tasks()

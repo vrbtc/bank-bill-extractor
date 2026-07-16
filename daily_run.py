@@ -112,6 +112,18 @@ def run():
         log(f"WARN: 滴答清单同步失败 - {e}")
         traceback.print_exc()
 
+    # Step 4: 推送到飞书群
+    log("Step 4: 推送账单汇总到飞书群...")
+    try:
+        from feishu_notify import FeishuNotifier
+
+        notifier = FeishuNotifier()
+        result = notifier.send_bills_summary(data_to_save)
+        log(f"  OK: 飞书推送成功 - {result.get('StatusMessage', 'done')}")
+    except Exception as e:
+        log(f"WARN: 飞书推送失败 - {e}")
+        traceback.print_exc()
+
     log("每日账单自动查询 + 滴答清单同步 完成")
     log("=" * 60)
     return True

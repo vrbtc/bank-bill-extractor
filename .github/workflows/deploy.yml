@@ -45,6 +45,7 @@ jobs:
           IMAP_SERVER: ${{ secrets.IMAP_SERVER }}
           IMAP_PORT: ${{ secrets.IMAP_PORT }}
           TICKTICK_API_KEY: ${{ secrets.TICKTICK_API_KEY }}
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
         run: |
           python generate_dashboard.py
 

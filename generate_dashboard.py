@@ -34,6 +34,13 @@ def generate_dashboard():
         except Exception as e:
             print(f'TickTick sync warning: {e}')
 
+    # Push to Feishu group (optional, won't fail the build if errors occur)
+    if bills and not extract_error:
+        try:
+            push_to_feishu(bills)
+        except Exception as e:
+            print(f'Feishu push warning: {e}')
+
     now = datetime.now()
     all_upcoming = get_upcoming_bills(bills, days=None)
     upcoming_15 = get_upcoming_bills(bills, days=15)
@@ -156,6 +163,30 @@ def sync_to_ticktick(bills):
     else:
         print(f"  Sync info: {result.get('message', 'unknown')}")
     print('--- TickTick Sync Done ---\n')
+
+
+def push_to_feishu(bills):
+    """Push bills summary to Feishu group. Optional - won't fail the build if errors occur."""
+    try:
+        from feishu_notify import FeishuNotifier
+    except Exception as e:
+        print(f'Feishu push: import failed ({e}), skipping')
+        return
+
+    # webhook URL can be overridden via env var, otherwise uses default
+    webhook_url = os.environ.get('FEISHU_WEBHOOK_URL', '')
+
+    print('\n--- Feishu Push ---')
+    notifier = FeishuNotifier(webhook_url=webhook_url if webhook_url else None)
+
+    bills_data = {
+        'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'bills': bills
+    }
+
+    result = notifier.send_bills_summary(bills_data)
+    print(f"  Push result: {result.get('StatusMessage', result)}")
+    print('--- Feishu Push Done ---\n')
 
 
 def build_html(data_json):
