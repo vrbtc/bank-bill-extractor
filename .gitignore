@@ -83,3 +83,29 @@ config.json
 
 # Summary files
 REFACTOR_SUMMARY.md
+
+# Backups and archives
+.backups/
+.git-rewrite/
+*.zip
+
+# Debug and one-off test scripts
+debug_*.py
+test_comm_*.py
+test_refactor.py
+
+# Local deployment working dirs
+gh-pages/
+
+# Screenshots and state files
+*.png
+ticktick_sync_state.json
+
+# Windows task scheduler exports
+BankBillDaily_task.xml
+
+# Batch/script helpers (local-only)
+daily_run.bat
+daily_run_hidden.vbs
+setup_task.bat
+setup_task.ps1
