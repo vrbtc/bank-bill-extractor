@@ -1,6 +1,6 @@
 # auto_sync.ps1 - 检查本地变更并自动提交推送到 GitHub
 # 供定时任务调用，无需人工干预。
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 Set-Location "k:\Trae CN\R BANK"
 
 $branch = git rev-parse --abbrev-ref HEAD
@@ -31,11 +31,11 @@ if ($dirty) {
 }
 
 # 推送（若失败则先 rebase 远程再推送）
-git push origin $branch 2>&1
+git push origin $branch
 if ($LASTEXITCODE -ne 0) {
     Write-Host "推送失败，尝试 rebase 后重试..."
-    git pull --rebase origin $branch 2>&1
-    git push origin $branch 2>&1
+    git pull --rebase origin $branch
+    git push origin $branch
     if ($LASTEXITCODE -ne 0) {
         Write-Host "ERROR: 推送失败，需人工介入"
         exit 1
