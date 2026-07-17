@@ -2,8 +2,10 @@ name: Deploy Bank Bill Dashboard
 
 on:
   schedule:
-    - cron: '0 3 * * *'   # UTC 03:00 = 北京时间 11:00
-    - cron: '0 9 * * *'   # UTC 09:00 = 北京时间 17:00
+    # GitHub Actions cron 通常延迟 2-3 小时，故提前 2 小时设置，
+    # 让实际推送时间接近北京 11:00 和 17:00
+    - cron: '0 1 * * *'   # UTC 01:00 = 北京 09:00（实际约 11:00 推送）
+    - cron: '0 7 * * *'   # UTC 07:00 = 北京 15:00（实际约 17:00 推送）
   push:
     branches: [ main ]
   workflow_dispatch:
