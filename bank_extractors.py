@@ -761,6 +761,109 @@ class CEBBankExtractor(BaseBankExtractor):
                     continue
 
 
+class ICBCBankExtractor(BaseBankExtractor):
+    """工商银行（牡丹卡/ICBC Peony Card）提取器"""
+
+    def get_supported_banks(self):
+        return ['工商银行']
+
+    def _clean_text(self, full_text):
+        soup = BeautifulSoup(full_text, 'html.parser')
+        clean_text = soup.get_text(separator=' ')
+        clean_text = clean_text.replace('\xa0', ' ').replace('&nbsp;', ' ')
+        clean_text = clean_text.replace('&yen;', '￥').replace('¥', '￥')
+        return ' '.join(clean_text.split())
+
+    def _parse_amount(self, amount_str):
+        try:
+            amount = float(amount_str.replace(',', '').replace(' ', ''))
+            if 0 < amount < 1000000:
+                return amount
+        except Exception:
+            pass
+        return None
+
+    def extract_amount(self, full_text, bill_info):
+        """提取工商银行本期应还金额（兼容 RMB / ￥ / 纯数字格式）"""
+        clean_text = self._clean_text(full_text)
+
+        # 优先匹配「本期应还金额 / New Balance」——工行对账单核心字段
+        amount_patterns = [
+            # 本期应还金额 New Balance RMB 1,234.56
+            r'本期应还金额\s*New Balance\s*(?:RMB|￥)?\s*([0-9,]+\.[0-9]{2})',
+            # 本期应还金额：RMB 1,234.56 / ￥1,234.56
+            r'本期应还金额[：:\s]*(?:RMB|￥)\s*([0-9,]+\.[0-9]{2})',
+            # 本期应还款额 RMB 1,234.56
+            r'本期应还款额[：:\s]*(?:RMB|￥)?\s*([0-9,]+\.[0-9]{2})',
+            # New Balance: RMB 1,234.56
+            r'New Balance[：:\s]*(?:RMB|￥)\s*([0-9,]+\.[0-9]{2})',
+            # 人民币账户 ... 本期应还 ... 1,234.56（避免误抓最低还款额）
+            r'人民币(?:账户)?[^0-9]{0,40}本期应还(?:金额|款项|款额)?[^0-9￥RMB]{0,20}(?:RMB|￥)?\s*([0-9,]+\.[0-9]{2})',
+            # 账单应还金额 / 应还总额
+            r'(?:账单应还金额|应还总额|应还款总额)[：:\s]*(?:RMB|￥)?\s*([0-9,]+\.[0-9]{2})',
+            # HTML 残留：New Balance 后的数字
+            r'New Balance[^0-9]{0,80}([0-9,]+\.[0-9]{2})',
+            # 宽松：本期应还金额 后第一个金额
+            r'本期应还金额[^0-9]{0,40}([0-9,]+\.[0-9]{2})',
+        ]
+
+        for pattern in amount_patterns:
+            match = re.search(pattern, clean_text, re.IGNORECASE)
+            if not match:
+                match = re.search(pattern, full_text, re.IGNORECASE | re.DOTALL)
+            if match:
+                amount = self._parse_amount(match.group(1))
+                if amount is not None:
+                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                    return
+
+        # 表格类文本：标签序列后跟数值列
+        # e.g. 本期应还金额 最低还款额 ... 1234.56 123.45
+        table_match = re.search(
+            r'本期应还金额\s*(?:New Balance\s*)?最低还款额.*?(?:RMB\s*)?([0-9,]+\.[0-9]{2})\s+(?:RMB\s*)?[0-9,]+\.[0-9]{2}',
+            clean_text,
+            re.IGNORECASE
+        )
+        if table_match:
+            amount = self._parse_amount(table_match.group(1))
+            if amount is not None:
+                bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                return
+
+    def extract_due_date(self, full_text, bill_info):
+        """提取工商银行到期还款日（避免误抓账单日 Statement Date）"""
+        clean_text = self._clean_text(full_text)
+
+        due_patterns = [
+            # 到期还款日 Payment Due Date 2026/07/22
+            r'到期还款日\s*Payment Due Date\s*(\d{4})[./-](\d{1,2})[./-](\d{1,2})',
+            # Payment Due Date: 2026-07-22
+            r'Payment Due Date[：:\s]*(\d{4})[./-](\d{1,2})[./-](\d{1,2})',
+            # 到期还款日：2026年07月22日
+            r'到期还款日[：:\s]*(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日?',
+            # 到期还款日 2026/07/22
+            r'到期还款日[：:\s]*(\d{4})[./-](\d{1,2})[./-](\d{1,2})',
+            # 最后还款日
+            r'最后还款日[：:\s]*(\d{4})[./-](\d{1,2})[./-](\d{1,2})',
+            r'最后还款日[：:\s]*(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日?',
+        ]
+
+        for pattern in due_patterns:
+            match = re.search(pattern, clean_text, re.IGNORECASE)
+            if not match:
+                match = re.search(pattern, full_text, re.IGNORECASE | re.DOTALL)
+            if match:
+                y, m, d = match.group(1), match.group(2).zfill(2), match.group(3).zfill(2)
+                date_str = f"{y}-{m}-{d}"
+                try:
+                    datetime.strptime(date_str, '%Y-%m-%d')
+                    if date_str not in bill_info['due_dates']:
+                        bill_info['due_dates'].append(date_str)
+                    return
+                except Exception:
+                    continue
+
+
 class OtherBankExtractor(BaseBankExtractor):
     """其他银行提取器（通用实现）"""
     
@@ -782,10 +885,13 @@ class OtherBankExtractor(BaseBankExtractor):
             r'本期应还款.*?￥([0-9,]+\.?[0-9]*)(?!.*最低)',
             r'Statement Balance.*?￥([0-9,]+\.?[0-9]*)',
             r'本期账单金额.*?￥([0-9,]+\.?[0-9]*)',
+            # 兼容 RMB 前缀（部分银行含工行历史兜底）
+            r'本期应还金额.*?RMB\s*([0-9,]+\.[0-9]{2})',
+            r'New Balance.*?RMB\s*([0-9,]+\.[0-9]{2})',
         ]
         
         for pattern in amount_patterns:
-            matches = re.findall(pattern, full_text, re.DOTALL)
+            matches = re.findall(pattern, full_text, re.DOTALL | re.IGNORECASE)
             for match in matches:
                 amount_str = match.replace(',', '')
                 try:
@@ -830,6 +936,7 @@ class BankExtractorFactory:
             CIBBankExtractor(),
             PingAnBankExtractor(),
             CEBBankExtractor(),
+            ICBCBankExtractor(),
         ]
         
         for extractor in extractors:
