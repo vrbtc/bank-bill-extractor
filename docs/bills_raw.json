@@ -1,6 +1,48 @@
 {
-  "generated_at": "2026-07-18 03:47:34",
+  "generated_at": "2026-07-19 04:16:41",
   "bills": [
+    {
+      "subject": "招商银行信用卡电子账单",
+      "date": "Sun, 19 Jul 2026 10:46:05 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 16386.45,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-08-06"
+      ],
+      "bank_name": "招商银行"
+    },
+    {
+      "subject": "招商银行信用卡ｅ招贷账单",
+      "date": "Sun, 19 Jul 2026 09:46:00 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 2965.61,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-08-06"
+      ],
+      "bank_name": "招商银行"
+    },
+    {
+      "subject": "广发信用卡 2026年07月电子账单",
+      "date": "Sat, 18 Jul 2026 17:43:50 +0800",
+      "amounts": [
+        {
+          "value": 1544.05,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-08-06"
+      ],
+      "bank_name": "广发银行"
+    },
     {
       "subject": "平安信用卡电子账单",
       "date": "Tue, 14 Jul 2026 18:22:50 +0800 (CST)",
@@ -171,34 +213,6 @@
       "amounts": [
         {
           "value": 2787.26,
-          "currency": "CNY"
-        }
-      ],
-      "due_dates": [
-        "2026-07-06"
-      ],
-      "bank_name": "招商银行"
-    },
-    {
-      "subject": "招商银行信用卡ｅ招贷账单",
-      "date": "Fri, 19 Jun 2026 12:10:35 +0800 (CST)",
-      "amounts": [
-        {
-          "value": 2965.57,
-          "currency": "CNY"
-        }
-      ],
-      "due_dates": [
-        "2026-07-06"
-      ],
-      "bank_name": "招商银行"
-    },
-    {
-      "subject": "招商银行信用卡电子账单",
-      "date": "Fri, 19 Jun 2026 12:10:21 +0800 (CST)",
-      "amounts": [
-        {
-          "value": 8158.42,
           "currency": "CNY"
         }
       ],
