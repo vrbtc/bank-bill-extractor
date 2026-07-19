@@ -1,11 +1,33 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""工商银行账单提取器单元测试"""
+"""工商银行账单提取器单元测试（含真实牡丹卡邮件格式）"""
 
 from bank_extractors import BankExtractorFactory, ICBCBankExtractor
 
 # 模拟工行牡丹卡对账单的常见 HTML / 文本形态
 SAMPLES = [
+    {
+        "name": "真实邮件格式 22,212.13/RMB + 贷记卡到期还款日",
+        "html": """
+        <html><body>
+        <p>中国工商银行客户对账单(ICBC Peony Card Bank Statement)</p>
+        <table>
+          <tr><td>贷记卡到期还款日</td><td></td><td align=right>2026年7月19日</td></tr>
+        </table>
+        <p>账单周期 2026年06月01日—2026年06月30日 对账单生成日 2026年06月30日</p>
+        <p>需 还 款 明 细 （特别提示:请按照以下账户分别还款）</p>
+        <table>
+          <tr><td>卡号后四位</td><td>币种</td><td>应还款额</td><td>最低还款额</td><td>信用额度</td></tr>
+          <tr><td>9889(牡丹贷记卡)</td><td>人民币(本位币)</td>
+              <td>22,212.13/RMB</td><td>2,221.21/RMB</td><td>80,000.00/RMB</td></tr>
+          <tr><td>合计</td><td>人民币(本位币)</td>
+              <td>22,212.13/RMB</td><td>2,221.21/RMB</td><td>/</td></tr>
+        </table>
+        </body></html>
+        """,
+        "expect_amount": 22212.13,
+        "expect_due": "2026-07-19",
+    },
     {
         "name": "标准中英双语摘要",
         "html": """
@@ -57,20 +79,28 @@ SAMPLES = [
         "expect_amount": 2100.00,
         "expect_due": "2026-07-10",
     },
-    {
-        "name": "用户确认金额 2212.13",
-        "html": """
-        <html><body>
-        <p>中国工商银行客户对账单(ICBC Peony Card Bank Statement)</p>
-        <p>到期还款日 Payment Due Date 2026/07/24</p>
-        <p>本期应还金额 New Balance RMB 2,212.13</p>
-        <p>最低还款额 Min.Payment RMB 221.21</p>
-        </body></html>
-        """,
-        "expect_amount": 2212.13,
-        "expect_due": "2026-07-24",
-    },
 ]
+
+
+def test_upcoming_includes_due_today():
+    """还款日=今天时，不应因 datetime 差值变成 -1 而漏掉"""
+    from this_month_bills import get_upcoming_bills
+    from datetime import datetime, timezone, timedelta
+
+    today = datetime.now(timezone(timedelta(hours=8))).date()
+    due = today.strftime("%Y-%m-%d")
+    bills = [{
+        "subject": "中国工商银行客户对账单(ICBC Peony Card Bank Statement)",
+        "date": "Thu, 2 Jul 2026 09:19:12 +0800 (CST)",
+        "amounts": [{"value": 22212.13, "currency": "CNY"}],
+        "due_dates": [due],
+        "bank_name": "工商银行",
+    }]
+    result = get_upcoming_bills(bills, days=None)
+    assert "工商银行" in result, "今日到期的工行账单应进入 upcoming"
+    assert abs(result["工商银行"]["total_amount"] - 22212.13) < 0.01
+    assert result["工商银行"]["earliest_due_date"]["days_until"] == 0
+    print("[PASS] 今日到期账单不会被过滤")
 
 
 def run_tests():
@@ -107,8 +137,16 @@ def run_tests():
         else:
             print("  !! mismatch")
 
-    print(f"\n结果: {passed}/{len(SAMPLES)} 通过")
-    return passed == len(SAMPLES)
+    try:
+        test_upcoming_includes_due_today()
+        passed += 1
+        total = len(SAMPLES) + 1
+    except Exception as e:
+        print(f"[FAIL] 今日到期过滤测试: {e}")
+        total = len(SAMPLES) + 1
+
+    print(f"\n结果: {passed}/{total} 通过")
+    return passed == total
 
 
 if __name__ == "__main__":

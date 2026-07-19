@@ -149,12 +149,18 @@ class BillExtractor:
             print(f"    还款日：{bill_info['due_dates'][:3]}")
 
 
-def get_upcoming_bills(bills, days=None):
+def get_upcoming_bills(bills, days=None, include_overdue_days=3):
     """
-    获取未来账单
+    获取未来账单（按日期比较，避免「今天还款」被算成 -1 天漏掉）
     days: None 表示获取所有未来账单，数字表示未来多少天
+    include_overdue_days: 包含已过期 N 天内的账单（默认 3 天，避免当天/时区边界漏单）
     """
-    today = datetime.now()
+    # 使用北京时间的「日期」做比较，与仪表盘时区一致
+    try:
+        from datetime import timezone, timedelta as _td
+        today = datetime.now(timezone(_td(hours=8))).date()
+    except Exception:
+        today = datetime.now().date()
     
     bank_bills = defaultdict(lambda: {
         'total_amount': 0,
@@ -177,15 +183,19 @@ def get_upcoming_bills(bills, days=None):
             
             parsed_date = None
             try:
-                parsed_date = datetime.strptime(due_date_str, '%Y-%m-%d')
+                parsed_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
             except:
                 continue
             
             days_until = (parsed_date - today).days
             
-            if days_until >= 0:
+            # 包含今天 + 未来 + 短宽限过期，避免漏掉当日还款账单
+            if days_until >= -include_overdue_days:
                 if days is None or days_until <= days:
-                    if best_days_until is None or days_until < best_days_until:
+                    # 优先选最近的还款日（含今天=0，过期取绝对值最小）
+                    if best_days_until is None or abs(days_until) < abs(best_days_until) or (
+                        abs(days_until) == abs(best_days_until) and days_until > best_days_until
+                    ):
                         best_days_until = days_until
                         best_due_date = due_date_str
         
@@ -199,7 +209,7 @@ def get_upcoming_bills(bills, days=None):
                 })
                 bank_info['total_amount'] += amount_info['value']
             
-            if bank_info['earliest_due_date'] is None or best_days_until < bank_info['earliest_due_date']['days_until']:
+            if bank_info['earliest_due_date'] is None or abs(best_days_until) < abs(bank_info['earliest_due_date']['days_until']):
                 bank_info['earliest_due_date'] = {
                     'date': best_due_date,
                     'days_until': best_days_until

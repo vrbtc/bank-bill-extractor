@@ -71,7 +71,13 @@ class TickTickSync:
         if not bills:
             return {"success": False, "message": "没有账单数据可同步"}
 
-        today = datetime.now()
+        # 按「日期」比较；含短宽限过期，避免当天还款因 datetime 差值变成 -1 被漏掉
+        try:
+            from datetime import timezone, timedelta as _td
+            today = datetime.now(timezone(_td(hours=8))).date()
+        except Exception:
+            today = datetime.now().date()
+        include_overdue_days = 3
         upcoming = {}
         for bill in bills:
             bank_name = bill.get("bank_name")
@@ -83,10 +89,12 @@ class TickTickSync:
             for due_date_str in bill.get("due_dates", []):
                 due_date_str = due_date_str.replace("/", "-")
                 try:
-                    due_date = datetime.strptime(due_date_str, "%Y-%m-%d")
+                    due_date = datetime.strptime(due_date_str, "%Y-%m-%d").date()
                     days_until = (due_date - today).days
-                    if days_until >= 0:
-                        if best_days is None or days_until < best_days:
+                    if days_until >= -include_overdue_days:
+                        if best_days is None or abs(days_until) < abs(best_days) or (
+                            abs(days_until) == abs(best_days) and days_until > best_days
+                        ):
                             best_days = days_until
                             best_due_date = due_date_str
                 except:
