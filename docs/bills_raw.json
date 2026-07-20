@@ -1,6 +1,20 @@
 {
-  "generated_at": "2026-07-19 04:16:41",
+  "generated_at": "2026-07-20 04:28:41",
   "bills": [
+    {
+      "subject": "招商银行分期信用卡电子账单",
+      "date": "Sun, 19 Jul 2026 12:18:59 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 2787.26,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-08-06"
+      ],
+      "bank_name": "招商银行"
+    },
     {
       "subject": "招商银行信用卡电子账单",
       "date": "Sun, 19 Jul 2026 10:46:05 +0800 (CST)",
@@ -144,9 +158,14 @@
     {
       "subject": "中国工商银行客户对账单(ICBC Peony Card Bank Statement)",
       "date": "Thu, 2 Jul 2026 09:19:12 +0800 (CST)",
-      "amounts": [],
+      "amounts": [
+        {
+          "value": 22212.13,
+          "currency": "CNY"
+        }
+      ],
       "due_dates": [
-        "2026-06-04"
+        "2026-07-19"
       ],
       "bank_name": "工商银行"
     },
@@ -206,20 +225,6 @@
         "2026-07-15"
       ],
       "bank_name": "交通银行"
-    },
-    {
-      "subject": "招商银行分期信用卡电子账单",
-      "date": "Fri, 19 Jun 2026 12:21:24 +0800 (CST)",
-      "amounts": [
-        {
-          "value": 2787.26,
-          "currency": "CNY"
-        }
-      ],
-      "due_dates": [
-        "2026-07-06"
-      ],
-      "bank_name": "招商银行"
     }
   ]
 }
