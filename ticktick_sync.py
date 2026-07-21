@@ -11,6 +11,8 @@
 - 到期提醒（提前1天，紧急的额外提前2小时）
 - 自动去重（已存在的任务跳过）
 - 自动清理过期任务（超过还款日7天的删除）
+- 已完成感知：用户在滴答清单里勾选完成的任务不会被重建
+  （滴答清单 OpenAPI 不返回已完成任务，需用本地状态文件记录）
 
 依赖：ticktick_api.py（纯 API 封装）
 """
@@ -25,6 +27,9 @@ from ticktick_api import TickTickAPI
 
 SCRIPT_DIR = Path(__file__).parent
 SYNC_STATE_FILE = SCRIPT_DIR / "ticktick_sync_state.json"
+# 用户已手动完成的任务标题集合：{title: completed_at_str}
+# 用于防止重建已完成的任务（OpenAPI 不返回 status=2 的任务，只能本地感知）
+COMPLETED_TITLES_FILE = SCRIPT_DIR / "ticktick_completed_titles.json"
 
 
 class TickTickSync:
@@ -151,10 +156,26 @@ class TickTickSync:
         project_id = self.api.find_or_create_project(project_name)
         existing_tasks = self.api.get_project_tasks(project_id)
         existing_map = {t["title"]: t for t in existing_tasks}
+        current_titles_set = set(existing_map.keys())
+
+        # 已完成感知：对比「上次同步时存在的标题」与「本次拉取到的标题」
+        # 消失的标题 = 用户手动完成（或手动删除）→ 加入本地 completed_titles
+        # 后续同步跳过这些标题，避免重建已完成的任务
+        # （OpenAPI /project/{pid}/data 不返回 status=2 的任务，只能靠本地状态感知）
+        completed_titles = self._load_completed_titles()
+        newly_completed = self._detect_newly_completed(current_titles_set)
+        if newly_completed:
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            for title in newly_completed:
+                if title not in completed_titles:
+                    print(f"  ✓ 检测到用户已手动完成，跳过重建: {title}")
+                    completed_titles[title] = now_str
+            self._save_completed_titles(completed_titles)
 
         created = []
         skipped = []
         updated = []
+        skipped_completed = []
         for bank, info in sorted(upcoming.items(), key=lambda x: x[1]["days_until"]):
             if info["total_amount"] <= 0:
                 continue
@@ -164,6 +185,11 @@ class TickTickSync:
                 info["due_date"], info["days_until"],
                 info["details"]
             )
+
+            # 跳过用户已手动完成的任务（防止重建）
+            if task["title"] in completed_titles:
+                skipped_completed.append({"bank": bank, "title": task["title"]})
+                continue
 
             if task["title"] in existing_map:
                 existing = existing_map[task["title"]]
@@ -202,7 +228,9 @@ class TickTickSync:
             except Exception as e:
                 created.append({"bank": bank, "error": str(e)})
 
-        self._save_sync_state(created, skipped)
+        # 更新 last_seen_titles = 当前未完成的 + 本次新建的（供下次同步对比）
+        all_current_titles = current_titles_set | {c["title"] for c in created if "title" in c}
+        self._save_sync_state(created, skipped, all_current_titles)
 
         return {
             "success": True,
@@ -211,18 +239,21 @@ class TickTickSync:
             "created": created,
             "skipped": skipped,
             "updated": updated,
+            "skipped_completed": skipped_completed,
             "total_created": len([c for c in created if "error" not in c]),
             "total_skipped": len(skipped),
             "total_updated": len(updated),
+            "total_skipped_completed": len(skipped_completed),
             "errors": len([c for c in created if "error" in c])
         }
 
-    def _save_sync_state(self, created, skipped):
+    def _save_sync_state(self, created, skipped, current_titles=None):
         state = {
             "last_sync": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "created_count": len(created),
             "skipped_count": len(skipped),
-            "created_tasks": created
+            "created_tasks": created,
+            "last_seen_titles": list(current_titles) if current_titles else []
         }
         try:
             with open(SYNC_STATE_FILE, "w", encoding="utf-8") as f:
@@ -235,6 +266,46 @@ class TickTickSync:
             with open(SYNC_STATE_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
         return None
+
+    def _load_completed_titles(self):
+        """读取用户已手动完成的任务标题集合。
+
+        返回 dict: {title: completed_at_str}，completed_at 记录完成时间。
+        标题里含金额，月份变了金额变，标题自然不再命中，无需额外清理。
+        """
+        if COMPLETED_TITLES_FILE.exists():
+            try:
+                with open(COMPLETED_TITLES_FILE, "r", encoding="utf-8") as f:
+                    return json.load(f).get("completed_titles", {})
+            except Exception:
+                pass
+        return {}
+
+    def _save_completed_titles(self, completed_titles):
+        """保存已完成的任务标题集合"""
+        try:
+            with open(COMPLETED_TITLES_FILE, "w", encoding="utf-8") as f:
+                json.dump({
+                    "completed_titles": completed_titles,
+                    "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
+    def _detect_newly_completed(self, current_titles_set):
+        """对比上次同步时存在的标题与本次拉取到的标题集合，
+        检测用户手动完成的任务（上次存在，本次不存在 = 已完成或已删除）。
+
+        返回 list[str]: 新完成的标题列表
+        """
+        state = self.load_sync_state()
+        if not state:
+            return []
+        last_seen = set(state.get("last_seen_titles", []))
+        if not last_seen:
+            return []
+        disappeared = last_seen - current_titles_set
+        return list(disappeared)
 
     def cleanup_old_tasks(self, project_name="信用卡还款"):
         project_id = self.api.find_or_create_project(project_name)
