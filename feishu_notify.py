@@ -224,10 +224,12 @@ class FeishuNotifier:
             empty_text = f"📅 {today_str} ~ {end_date}\n\n未来 {days} 天暂无待办事项 ✨"
 
         if not tasks:
-            payload = {"msg_type": "text", "content": {"text": empty_text}}
+            # 无待办事项时不推送（避免无意义打扰）
+            # 仅在日志中记录，不调用 _send()
+            print(f"  ℹ️ 无待办事项，跳过推送（days={days}）")
             if dry_run:
-                return payload
-            return self._send(payload)
+                return {"skipped": True, "reason": "no_tasks", "msg_type": "text", "content": {"text": empty_text}}
+            return {"skipped": True, "reason": "no_tasks", "StatusMessage": "No tasks, skip push"}
 
         # 分组：逾期 / 今天(offset=0) / 明天(1) / 后天(2) ...
         overdue = [t for t in tasks if t["is_overdue"]]
