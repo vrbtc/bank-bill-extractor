@@ -39,10 +39,28 @@ class TickTickSync:
         else:
             return 1
 
+    # 银行全称 -> 最短中文缩写（用于任务标题）
+    BANK_ABBR = {
+        '招商银行': '招行', '广发银行': '广发', '平安银行': '平安',
+        '光大银行': '光大', '兴业银行': '兴业', '邮储银行': '邮储',
+        '浦发银行': '浦发', '民生银行': '民生', '交通银行': '交行',
+        '建设银行': '建行', '工商银行': '工行', '中国银行': '中行', '农业银行': '农行',
+    }
+
+    def _bank_abbr(self, bank_name):
+        """获取银行最短中文缩写（招行/建行/工行...），未匹配则原样返回"""
+        for full, abbr in self.BANK_ABBR.items():
+            if full in bank_name:
+                return abbr
+        return bank_name
+
     def _build_task(self, bank, amount, due_date, days_until, bill_details=None):
         priority = self._calc_priority(days_until)
 
-        content_parts = [f"还款金额：¥{amount:,.2f}", f"还款日：{due_date}（{days_until}天后）"]
+        # 标题格式：💳 银行缩写 金额 元（不带¥和千分位逗号）
+        bank_abbr = self._bank_abbr(bank)
+        # content 里不再写"（X天后）"，只保留日期
+        content_parts = [f"还款金额：¥{amount:,.2f}", f"还款日：{due_date}"]
         if bill_details:
             content_parts.append("")
             content_parts.append("明细：")
@@ -58,7 +76,7 @@ class TickTickSync:
             reminders.append("TRIGGER:PT0M")
 
         return {
-            "title": f"💳 {bank}信用卡还款 ¥{amount:,.2f}",
+            "title": f"💳 {bank_abbr} {amount:.2f} 元",
             "content": "\n".join(content_parts),
             "due_date": due_date,
             "due_hour": 11,
