@@ -77,11 +77,15 @@ def generate_dashboard():
     banks_count_all = len([b for b, i in all_upcoming.items() if i['total_amount'] > 0])
 
     urgent_bills = []
-    for bank_name, info in sorted(upcoming_15.items(), key=lambda x: x[1]['earliest_due_date']['days_until'] if x[1]['earliest_due_date'] else 999):
+    for bank_key, info in sorted(upcoming_15.items(), key=lambda x: x[1]['earliest_due_date']['days_until'] if x[1]['earliest_due_date'] else 999):
         if info['total_amount'] > 0 and info['earliest_due_date']:
             days = info['earliest_due_date']['days_until']
+            bank_name = info.get('bank_name', bank_key.split('|')[0] if '|' in bank_key else bank_key)
+            source_label = info.get('source_label', '')
+            # YY 后缀：QQ 邮箱的账单在银行名后追加 (YY) 标识
+            display_name = f"{bank_name} ({source_label})" if source_label else bank_name
             urgent_bills.append({
-                'bank': bank_name,
+                'bank': display_name,
                 'amount': info['total_amount'],
                 'due_date': info['earliest_due_date']['date'],
                 'days_until': days,
@@ -89,10 +93,13 @@ def generate_dashboard():
             })
 
     all_bills_data = []
-    for bank_name, info in sorted(all_upcoming.items(), key=lambda x: x[1]['earliest_due_date']['days_until'] if x[1]['earliest_due_date'] else 999):
+    for bank_key, info in sorted(all_upcoming.items(), key=lambda x: x[1]['earliest_due_date']['days_until'] if x[1]['earliest_due_date'] else 999):
         if info['total_amount'] > 0 and info['earliest_due_date']:
+            bank_name = info.get('bank_name', bank_key.split('|')[0] if '|' in bank_key else bank_key)
+            source_label = info.get('source_label', '')
+            display_name = f"{bank_name} ({source_label})" if source_label else bank_name
             all_bills_data.append({
-                'bank': bank_name,
+                'bank': display_name,
                 'amount': info['total_amount'],
                 'due_date': info['earliest_due_date']['date'],
                 'days_until': info['earliest_due_date']['days_until'],
@@ -160,24 +167,31 @@ def _get_active_ticktick_titles():
 def _filter_completed_banks(upcoming_dict, active_titles):
     """从 upcoming_dict 里删除已在 TickTick 完成的银行（原地修改）。
 
-    匹配规则：用银行全称+总额构造任务标题 `💳 {abbr} {total:.2f} 元`，
+    匹配规则：用银行全称+总额+YY后缀构造任务标题
+    `💳 {abbr} {total:.2f} 元` 或 `💳 {abbr} {total:.2f} 元 (YY)`，
     如果该标题不在 active_titles 里，视为用户已完成。
 
+    多邮箱模式：upcoming_dict 的 key 是 bank_name|source_label，
+    info 里有 bank_name 和 source_label 字段。
+
     Returns:
-        set[str]: 被移除的银行名集合
+        set[str]: 被移除的银行 key 集合
     """
     from ticktick_sync import TickTickSync
     to_remove = []
-    for bank_name, info in upcoming_dict.items():
+    for bank_key, info in upcoming_dict.items():
         total = info.get('total_amount', 0)
         if total <= 0:
             continue
+        bank_name = info.get('bank_name', bank_key.split('|')[0] if '|' in bank_key else bank_key)
+        source_label = info.get('source_label', '')
         abbr = TickTickSync._bank_abbr(bank_name)
-        title = f"💳 {abbr} {total:.2f} 元"
+        label_suffix = TickTickSync._label_suffix(source_label)
+        title = f"💳 {abbr} {total:.2f} 元{label_suffix}"
         if title not in active_titles:
-            to_remove.append(bank_name)
-    for bank_name in to_remove:
-        del upcoming_dict[bank_name]
+            to_remove.append(bank_key)
+    for bank_key in to_remove:
+        del upcoming_dict[bank_key]
     return set(to_remove)
 
 

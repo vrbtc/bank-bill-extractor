@@ -50,6 +50,7 @@ class TickTickSync:
         '光大银行': '光大', '兴业银行': '兴业', '邮储银行': '邮储',
         '浦发银行': '浦发', '民生银行': '民生', '交通银行': '交行',
         '建设银行': '建行', '工商银行': '工行', '中国银行': '中行', '农业银行': '农行',
+        '长安银行': '长安',
     }
 
     @staticmethod
@@ -60,11 +61,19 @@ class TickTickSync:
                 return abbr
         return bank_name
 
-    def _build_task(self, bank, amount, due_date, days_until, bill_details=None):
+    @staticmethod
+    def _label_suffix(label):
+        """生成 YY 后缀字符串，空 label 返回空字符串"""
+        if label and label.strip():
+            return f" ({label.strip()})"
+        return ""
+
+    def _build_task(self, bank, amount, due_date, days_until, bill_details=None, source_label=''):
         priority = self._calc_priority(days_until)
 
-        # 标题格式：💳 银行缩写 金额 元（不带¥和千分位逗号）
+        # 标题格式：💳 银行缩写 金额 元 (YY)（不带¥和千分位逗号，有 label 加后缀）
         bank_abbr = self._bank_abbr(bank)
+        label_suffix = self._label_suffix(source_label)
         # content 里不再写"（X天后）"，只保留日期
         content_parts = [f"还款金额：¥{amount:,.2f}", f"还款日：{due_date}"]
         if bill_details:
@@ -82,7 +91,7 @@ class TickTickSync:
             reminders.append("TRIGGER:PT0M")
 
         return {
-            "title": f"💳 {bank_abbr} {amount:.2f} 元",
+            "title": f"💳 {bank_abbr} {amount:.2f} 元{label_suffix}",
             "content": "\n".join(content_parts),
             "due_date": due_date,
             "due_hour": 11,
@@ -108,6 +117,10 @@ class TickTickSync:
             if not bank_name:
                 continue
 
+            # 多邮箱模式：同银行不同邮箱分开存（用 bank_name|label 作为 key）
+            source_label = bill.get("source_label", "")
+            upcoming_key = f"{bank_name}|{source_label}"
+
             best_due_date = None
             best_days = None
             for due_date_str in bill.get("due_dates", []):
@@ -125,16 +138,18 @@ class TickTickSync:
                     continue
 
             if best_due_date and best_days is not None:
-                if bank_name not in upcoming:
-                    upcoming[bank_name] = {
+                if upcoming_key not in upcoming:
+                    upcoming[upcoming_key] = {
+                        "bank_name": bank_name,
+                        "source_label": source_label,
                         "total_amount": 0,
                         "due_date": best_due_date,
                         "days_until": best_days,
                         "details": []
                     }
                 for amount_info in bill.get("amounts", []):
-                    upcoming[bank_name]["total_amount"] += amount_info["value"]
-                    upcoming[bank_name]["details"].append({
+                    upcoming[upcoming_key]["total_amount"] += amount_info["value"]
+                    upcoming[upcoming_key]["details"].append({
                         "subject": bill["subject"],
                         "amount": amount_info["value"]
                     })
@@ -144,12 +159,13 @@ class TickTickSync:
 
         if dry_run:
             tasks = []
-            for bank, info in sorted(upcoming.items(), key=lambda x: x[1]["days_until"]):
+            for key, info in sorted(upcoming.items(), key=lambda x: x[1]["days_until"]):
                 if info["total_amount"] > 0:
                     task = self._build_task(
-                        bank, info["total_amount"],
+                        info["bank_name"], info["total_amount"],
                         info["due_date"], info["days_until"],
-                        info["details"]
+                        info["details"],
+                        source_label=info.get("source_label", "")
                     )
                     tasks.append(task)
             return {"success": True, "dry_run": True, "tasks": tasks, "count": len(tasks)}
@@ -177,19 +193,21 @@ class TickTickSync:
         skipped = []
         updated = []
         skipped_completed = []
-        for bank, info in sorted(upcoming.items(), key=lambda x: x[1]["days_until"]):
+        for key, info in sorted(upcoming.items(), key=lambda x: x[1]["days_until"]):
             if info["total_amount"] <= 0:
                 continue
 
+            bank_name = info["bank_name"]
             task = self._build_task(
-                bank, info["total_amount"],
+                bank_name, info["total_amount"],
                 info["due_date"], info["days_until"],
-                info["details"]
+                info["details"],
+                source_label=info.get("source_label", "")
             )
 
             # 跳过用户已手动完成的任务（防止重建）
             if task["title"] in completed_titles:
-                skipped_completed.append({"bank": bank, "title": task["title"]})
+                skipped_completed.append({"bank": bank_name, "title": task["title"]})
                 continue
 
             if task["title"] in existing_map:
@@ -205,10 +223,10 @@ class TickTickSync:
                         reminders=task["reminders"],
                         is_all_day=False
                     )
-                    updated.append({"bank": bank, "task_id": existing["id"], "title": task["title"]})
+                    updated.append({"bank": bank_name, "task_id": existing["id"], "title": task["title"]})
                 except Exception as e:
-                    print(f"  Update failed for {bank}: {e}")
-                    skipped.append({"bank": bank, "reason": f"更新失败: {e}"})
+                    print(f"  Update failed for {bank_name}: {e}")
+                    skipped.append({"bank": bank_name, "reason": f"更新失败: {e}"})
                 continue
 
             try:
@@ -222,12 +240,12 @@ class TickTickSync:
                     due_hour=task.get("due_hour", 11)
                 )
                 created.append({
-                    "bank": bank,
+                    "bank": bank_name,
                     "task_id": result.get("id"),
                     "title": task["title"]
                 })
             except Exception as e:
-                created.append({"bank": bank, "error": str(e)})
+                created.append({"bank": bank_name, "error": str(e)})
 
         # 更新 last_seen_titles = 当前未完成的 + 本次新建的（供下次同步对比）
         all_current_titles = current_titles_set | {c["title"] for c in created if "title" in c}

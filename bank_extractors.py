@@ -875,6 +875,61 @@ class ICBCBankExtractor(BaseBankExtractor):
                     continue
 
 
+class ChangAnBankExtractor(BaseBankExtractor):
+    """长安银行提取器
+
+    长安银行账单 HTML 特点：
+    - 本期应还款金额(元) 后跟 9,104.00（千分位逗号）
+    - 到期还款日 后跟 2026/08/15
+    """
+
+    def get_supported_banks(self):
+        return ['长安银行']
+
+    def preprocess_text(self, full_text):
+        return full_text.replace('&amp;', '&').replace('&nbsp;', ' ')
+
+    def extract_amount(self, full_text, bill_info):
+        """提取金额：本期应还款金额(元) 9,104.00"""
+        # 先把 HTML 标签清理一下，避免标签属性里的数字干扰
+        soup = BeautifulSoup(full_text, 'html.parser')
+        clean_text = soup.get_text()
+        clean_text = ' '.join(clean_text.split())
+
+        patterns = [
+            # 本期应还款金额(元) 9,104.00
+            r'本期应还款金额.*?([0-9,]+\.[0-9]{2})',
+            # 本期应还金额 9,104.00（出现在明细表头）
+            r'本期应还金额.*?([0-9,]+\.[0-9]{2})',
+        ]
+        for pattern in patterns:
+            matches = re.findall(pattern, clean_text, re.DOTALL)
+            for match in matches:
+                try:
+                    amount = float(match.replace(',', ''))
+                    if 0 < amount < 1000000:
+                        if not any(a['value'] == amount for a in bill_info['amounts']):
+                            bill_info['amounts'].append({'value': amount, 'currency': 'CNY'})
+                except:
+                    continue
+
+    def extract_due_date(self, full_text, bill_info):
+        """提取还款日：到期还款日 2026/08/15"""
+        soup = BeautifulSoup(full_text, 'html.parser')
+        clean_text = soup.get_text()
+        clean_text = ' '.join(clean_text.split())
+
+        patterns = [
+            r'到期还款日.*?([0-9]{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
+            r'还款日.*?([0-9]{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
+        ]
+        for pattern in patterns:
+            matches = re.findall(pattern, clean_text, re.DOTALL)
+            for match in matches:
+                if match not in bill_info['due_dates']:
+                    bill_info['due_dates'].append(match)
+
+
 class OtherBankExtractor(BaseBankExtractor):
     """其他银行提取器（通用实现）"""
     
@@ -899,6 +954,8 @@ class OtherBankExtractor(BaseBankExtractor):
             # 兼容 RMB 前缀（部分银行含工行历史兜底）
             r'本期应还金额.*?RMB\s*([0-9,]+\.[0-9]{2})',
             r'New Balance.*?RMB\s*([0-9,]+\.[0-9]{2})',
+            # 通用：本期应还款金额(元) 9,104.00（兼容无 ￥ 符号的银行）
+            r'本期应还款金额.*?([0-9,]+\.[0-9]{2})',
         ]
         
         for pattern in amount_patterns:
@@ -948,6 +1005,7 @@ class BankExtractorFactory:
             PingAnBankExtractor(),
             CEBBankExtractor(),
             ICBCBankExtractor(),
+            ChangAnBankExtractor(),
         ]
         
         for extractor in extractors:

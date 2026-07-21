@@ -42,6 +42,11 @@ jobs:
 
       - name: Generate dashboard
         env:
+          # 多邮箱配置：JSON 字符串，每个邮箱可配置 label（如 YY）
+          # 格式: [{"address":"...","password":"...","imap_server":"...","imap_port":993,"label":"YY"}]
+          # 如果未配置 EMAILS_JSON，会回退到 EMAIL_ADDRESS/EMAIL_PASSWORD 单邮箱模式
+          EMAILS_JSON: ${{ secrets.EMAILS_JSON }}
+          # 单邮箱模式（向后兼容，EMAILS_JSON 未配置时使用）
           EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
           IMAP_SERVER: ${{ secrets.IMAP_SERVER }}

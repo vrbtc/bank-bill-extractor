@@ -18,12 +18,16 @@ from email_decoder import EmailDecoder
 from bank_extractors import BankExtractorFactory
 
 
-# 支持环境变量配置（CI 环境），回退到默认值（本地运行）
-from config import EMAIL_ADDRESS, PASSWORD, IMAP_SERVER, IMAP_PORT
+# 支持多邮箱配置：优先使用 get_all_emails()，单邮箱配置仍向后兼容
+from config import get_all_emails
 
 
 class BillExtractor:
-    """账单提取器（协调器）"""
+    """账单提取器（协调器）
+
+    支持多邮箱：每个邮箱可配置 label（如 "YY"），
+    账单的 source_label 字段会传递到 TickTick 任务标题和仪表盘显示。
+    """
     
     BANK_MAP = {
         '交通银行': '交通银行', '招商银行': '招商银行', '中国银行': '中国银行',
@@ -35,20 +39,52 @@ class BillExtractor:
         'CMB': '招商银行',
         # 工商银行英文/简称（Peony Card 对账单标题常用）
         'ICBC': '工商银行', 'Peony': '工商银行', '牡丹卡': '工商银行',
+        # 长安银行
+        '长安银行': '长安银行',
     }
+
+    # 跳过的账单邮件主题关键词（不含金额的纯通知类邮件）
+    SKIP_SUBJECT_KEYWORDS = ['补制']
     
     def __init__(self):
         self.email_decoder = EmailDecoder()
         self.bank_factory = BankExtractorFactory()
     
     def fetch_and_extract(self, limit=50):
-        """获取并提取账单"""
-        client = EmailClient(IMAP_SERVER, IMAP_PORT, EMAIL_ADDRESS, PASSWORD)
+        """获取并提取账单（多邮箱模式）
+
+        遍历 config.get_all_emails() 返回的所有邮箱，
+        每封账单邮件会带上 source_label 字段。
+        """
+        all_bills = []
+        emails_config = get_all_emails()
+
+        if not emails_config:
+            print("⚠️ 未配置任何邮箱，请检查 config.json 或环境变量")
+            return all_bills
+
+        print(f"📧 共配置 {len(emails_config)} 个邮箱")
+        for i, em_cfg in enumerate(emails_config, 1):
+            label_display = f" (label={em_cfg['label']})" if em_cfg['label'] else ""
+            print(f"\n--- 邮箱 {i}/{len(emails_config)}: {em_cfg['address']}{label_display} ---")
+            bills = self._fetch_from_one_email(em_cfg, limit=limit)
+            all_bills.extend(bills)
+
+        return all_bills
+
+    def _fetch_from_one_email(self, em_cfg, limit=50):
+        """从单个邮箱拉取并提取账单"""
+        client = EmailClient(
+            em_cfg['imap_server'],
+            em_cfg['imap_port'],
+            em_cfg['address'],
+            em_cfg['password']
+        )
         client.connect()
         
         try:
             emails = client.fetch_emails(limit=limit)
-            all_bills = []
+            bills_from_this = []
             
             for idx, msg in enumerate(emails, 1):
                 subject = self.email_decoder.decode_mime_words(msg.get('Subject', ''))
@@ -57,13 +93,28 @@ class BillExtractor:
                 html_body = self._extract_html_body(msg)
                 
                 if self._is_bill_email(subject):
+                    # 跳过补制类邮件（不含金额）
+                    if self._is_skip_subject(subject):
+                        print(f"[{idx}] ⏭️ 跳过通知类账单邮件: {subject}")
+                        continue
                     print(f"[{idx}] {subject}")
                     bills = self.extract_from_html(html_body, subject, date)
-                    all_bills.extend(bills)
+                    # 给每个账单打上 source_label
+                    for bill in bills:
+                        bill['source_label'] = em_cfg.get('label', '')
+                        bill['source_email'] = em_cfg['address']
+                    bills_from_this.extend(bills)
             
-            return all_bills
+            return bills_from_this
         finally:
             client.disconnect()
+
+    def _is_skip_subject(self, subject):
+        """判断是否应跳过此账单邮件（如补制类不含金额）"""
+        for kw in self.SKIP_SUBJECT_KEYWORDS:
+            if kw in subject:
+                return True
+        return False
     
     def _extract_html_body(self, msg):
         """提取邮件 HTML 内容"""
@@ -154,6 +205,8 @@ def get_upcoming_bills(bills, days=None, include_overdue_days=3):
     获取未来账单（按日期比较，避免「今天还款」被算成 -1 天漏掉）
     days: None 表示获取所有未来账单，数字表示未来多少天
     include_overdue_days: 包含已过期 N 天内的账单（默认 3 天，避免当天/时区边界漏单）
+
+    多邮箱模式：同银行不同 source_label 分别聚合（key = bank_name|label）
     """
     # 使用北京时间的「日期」做比较，与仪表盘时区一致
     try:
@@ -161,34 +214,40 @@ def get_upcoming_bills(bills, days=None, include_overdue_days=3):
         today = datetime.now(timezone(_td(hours=8))).date()
     except Exception:
         today = datetime.now().date()
-    
+
     bank_bills = defaultdict(lambda: {
         'total_amount': 0,
         'amounts': [],
-        'earliest_due_date': None
+        'earliest_due_date': None,
+        'source_label': ''
     })
-    
+
     for bill in bills:
         bank_name = bill.get('bank_name')
         if not bank_name:
             continue
-        
-        bank_info = bank_bills[bank_name]
-        
+
+        source_label = bill.get('source_label', '')
+        # 多邮箱模式：同银行不同 source_label 分别聚合
+        bank_key = f"{bank_name}|{source_label}"
+        bank_info = bank_bills[bank_key]
+        bank_info['bank_name'] = bank_name
+        bank_info['source_label'] = source_label
+
         best_due_date = None
         best_days_until = None
-        
+
         for due_date_str in bill.get('due_dates', []):
             due_date_str = due_date_str.replace('/', '-')
-            
+
             parsed_date = None
             try:
                 parsed_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
             except:
                 continue
-            
+
             days_until = (parsed_date - today).days
-            
+
             # 包含今天 + 未来 + 短宽限过期，避免漏掉当日还款账单
             if days_until >= -include_overdue_days:
                 if days is None or days_until <= days:
@@ -198,7 +257,7 @@ def get_upcoming_bills(bills, days=None, include_overdue_days=3):
                     ):
                         best_days_until = days_until
                         best_due_date = due_date_str
-        
+
         if best_due_date and best_days_until is not None:
             for amount_info in bill.get('amounts', []):
                 bank_info['amounts'].append({
