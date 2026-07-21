@@ -100,6 +100,7 @@ gh-pages/
 # Screenshots and state files
 *.png
 ticktick_sync_state.json
+ticktick_completed_titles.json
 
 # Windows task scheduler exports
 BankBillDaily_task.xml
@@ -109,3 +110,6 @@ daily_run.bat
 daily_run_hidden.vbs
 setup_task.bat
 setup_task.ps1
+fix-task.ps1
+.auto-sync-runner.bat
+auto-sync.ps1
