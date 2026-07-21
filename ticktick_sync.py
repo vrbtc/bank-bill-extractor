@@ -94,13 +94,13 @@ class TickTickSync:
         if not bills:
             return {"success": False, "message": "没有账单数据可同步"}
 
-        # 按「日期」比较；含短宽限过期，避免当天还款因 datetime 差值变成 -1 被漏掉
+        # 按「日期」比较；逾期账单也一直保留，直到用户在滴答清单里手动勾选完成
+        # （completed_titles.json 机制保证用户完成后不会被重建）
         try:
             from datetime import timezone, timedelta as _td
             today = datetime.now(timezone(_td(hours=8))).date()
         except Exception:
             today = datetime.now().date()
-        include_overdue_days = 3
         upcoming = {}
         for bill in bills:
             bank_name = bill.get("bank_name")
@@ -114,12 +114,12 @@ class TickTickSync:
                 try:
                     due_date = datetime.strptime(due_date_str, "%Y-%m-%d").date()
                     days_until = (due_date - today).days
-                    if days_until >= -include_overdue_days:
-                        if best_days is None or abs(days_until) < abs(best_days) or (
-                            abs(days_until) == abs(best_days) and days_until > best_days
-                        ):
-                            best_days = days_until
-                            best_due_date = due_date_str
+                    # 不再过滤逾期账单：保留所有账单，由用户在滴答清单手动完成
+                    if best_days is None or abs(days_until) < abs(best_days) or (
+                        abs(days_until) == abs(best_days) and days_until > best_days
+                    ):
+                        best_days = days_until
+                        best_due_date = due_date_str
                 except:
                     continue
 
@@ -308,23 +308,15 @@ class TickTickSync:
         return list(disappeared)
 
     def cleanup_old_tasks(self, project_name="信用卡还款"):
+        """保留所有任务，不再自动删除逾期任务。
+
+        逾期账单会一直保留在滴答清单里，直到用户手动勾选完成。
+        用户完成后由 completed_titles.json 机制防止重建。
+        此方法保留为兼容入口（daily_run.py 会调用），但不再做任何删除。
+        """
         project_id = self.api.find_or_create_project(project_name)
         tasks = self.api.get_project_tasks(project_id)
-        today = datetime.now()
-        deleted = 0
-
-        for task in tasks:
-            due_date_str = task.get("dueDate", "")
-            if due_date_str:
-                try:
-                    due_date = datetime.strptime(due_date_str[:10], "%Y-%m-%d")
-                    if (today - due_date).days > 7:
-                        if self.api.delete_task(task["id"]):
-                            deleted += 1
-                except:
-                    pass
-
-        return {"deleted": deleted, "remaining": len(tasks) - deleted}
+        return {"deleted": 0, "remaining": len(tasks)}
 
 
 if __name__ == "__main__":
