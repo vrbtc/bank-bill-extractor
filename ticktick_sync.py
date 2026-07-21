@@ -52,9 +52,10 @@ class TickTickSync:
         '建设银行': '建行', '工商银行': '工行', '中国银行': '中行', '农业银行': '农行',
     }
 
-    def _bank_abbr(self, bank_name):
+    @staticmethod
+    def _bank_abbr(bank_name):
         """获取银行最短中文缩写（招行/建行/工行...），未匹配则原样返回"""
-        for full, abbr in self.BANK_ABBR.items():
+        for full, abbr in TickTickSync.BANK_ABBR.items():
             if full in bank_name:
                 return abbr
         return bank_name

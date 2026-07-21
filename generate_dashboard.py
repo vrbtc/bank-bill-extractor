@@ -50,6 +50,23 @@ def generate_dashboard():
     upcoming_7 = get_upcoming_bills(bills, days=7)
     upcoming_3 = get_upcoming_bills(bills, days=3)
 
+    # 过滤已在滴答清单完成的银行：
+    # 调用 TickTick API 拉取"信用卡还款"项目所有未完成任务标题，
+    # 凡是 bills 里有但 TickTick 里没有对应任务的银行 = 用户已完成 → 从仪表盘移除
+    # 云端 runner 没有 completed_titles.json，这是唯一能让云端感知完成状态的方式
+    try:
+        active_titles = _get_active_ticktick_titles()
+        if active_titles:
+            completed = set()
+            completed |= _filter_completed_banks(all_upcoming, active_titles)
+            _filter_completed_banks(upcoming_15, active_titles)
+            _filter_completed_banks(upcoming_7, active_titles)
+            _filter_completed_banks(upcoming_3, active_titles)
+            if completed:
+                print(f"Filtered {len(completed)} completed banks from dashboard: {completed}")
+    except Exception as e:
+        print(f"TickTick completed-filter warning: {e}")
+
     total_all = sum(info['total_amount'] for info in all_upcoming.values() if info['total_amount'] > 0)
     total_15 = sum(info['total_amount'] for info in upcoming_15.values() if info['total_amount'] > 0)
     total_7 = sum(info['total_amount'] for info in upcoming_7.values() if info['total_amount'] > 0)
@@ -110,6 +127,58 @@ def generate_dashboard():
     print(f"Total upcoming (all): {total_all:,.2f}")
     print(f"Total upcoming (15 days): {total_15:,.2f}")
     return True
+
+
+def _get_active_ticktick_titles():
+    """从 TickTick 拉取"信用卡还款"项目所有未完成任务标题集合。
+
+    用于感知用户已完成的银行：凡是在 bills 里有但 TickTick 里
+    没有对应任务的银行 = 用户已完成（或删除）→ 仪表盘不显示。
+
+    云端 runner 没有 completed_titles.json 本地文件，这是唯一能让云端
+    感知完成状态的方式。
+    """
+    api_key = os.environ.get('TICKTICK_API_KEY', '').strip()
+    if not api_key:
+        config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    api_key = json.load(f).get('ticktick_api_key', '').strip()
+            except Exception:
+                pass
+    if not api_key:
+        return set()
+
+    from ticktick_api import TickTickAPI
+    api = TickTickAPI(api_key=api_key)
+    project_id = api.find_or_create_project("信用卡还款")
+    tasks = api.get_project_tasks(project_id)
+    return {t.get("title", "") for t in tasks}
+
+
+def _filter_completed_banks(upcoming_dict, active_titles):
+    """从 upcoming_dict 里删除已在 TickTick 完成的银行（原地修改）。
+
+    匹配规则：用银行全称+总额构造任务标题 `💳 {abbr} {total:.2f} 元`，
+    如果该标题不在 active_titles 里，视为用户已完成。
+
+    Returns:
+        set[str]: 被移除的银行名集合
+    """
+    from ticktick_sync import TickTickSync
+    to_remove = []
+    for bank_name, info in upcoming_dict.items():
+        total = info.get('total_amount', 0)
+        if total <= 0:
+            continue
+        abbr = TickTickSync._bank_abbr(bank_name)
+        title = f"💳 {abbr} {total:.2f} 元"
+        if title not in active_titles:
+            to_remove.append(bank_name)
+    for bank_name in to_remove:
+        del upcoming_dict[bank_name]
+    return set(to_remove)
 
 
 def sync_to_ticktick(bills):
