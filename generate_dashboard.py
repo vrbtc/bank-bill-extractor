@@ -139,9 +139,33 @@ def sync_to_ticktick(bills):
     print('\n--- TickTick Sync ---')
     sync = TickTickSync(api_key=api_key)
 
+    # 云端 runner 没有本地 ticktick_completed_titles.json，
+    # 无法感知用户在滴答清单里手动完成的任务，若对逾期账单也同步会重建已完成的任务。
+    # 所以云端只处理「未来账单」（days_until >= 0），逾期账单交给本地 daily_run.py 处理。
+    today_bj = datetime.now(BJ_TZ).date()
+    future_bills = []
+    skipped_overdue = 0
+    for bill in bills:
+        bank = bill.get('bank_name', '')
+        has_future = False
+        for dd in bill.get('due_dates', []):
+            try:
+                d = datetime.strptime(str(dd).replace('/', '-'), '%Y-%m-%d').date()
+                if (d - today_bj).days >= 0:
+                    has_future = True
+                    break
+            except Exception:
+                pass
+        if has_future:
+            future_bills.append(bill)
+        else:
+            skipped_overdue += 1
+    if skipped_overdue:
+        print(f"  Skipped {skipped_overdue} overdue bills (云端不处理逾期账单，交给本地 daily_run.py)")
+
     bills_data = {
         'generated_at': datetime.now(BJ_TZ).strftime('%Y-%m-%d %H:%M:%S'),
-        'bills': bills
+        'bills': future_bills
     }
 
     # Clean up old tasks first
