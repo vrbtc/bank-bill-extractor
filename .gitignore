@@ -93,6 +93,14 @@ REFACTOR_SUMMARY.md
 debug_*.py
 test_comm_*.py
 test_refactor.py
+_*.py
+_verify*.py
+_test*.py
+_check*.py
+_list*.py
+_modify*.py
+_fix*.py
+_delete*.py
 
 # Local deployment working dirs
 gh-pages/
