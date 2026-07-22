@@ -238,9 +238,16 @@ class TickTickAPI:
         resp.raise_for_status()
         return resp.json()
 
-    def delete_task(self, task_id):
-        """删除任务"""
-        resp = self.session.delete(f"{BASE_URL}/task/{task_id}")
+    def delete_task(self, task_id, project_id=None):
+        """删除任务（TickTick OpenAPI 不支持 DELETE 方法，用 status=2 完成代替）
+
+        完成后任务从 OpenAPI 列表中消失，等效于删除。
+        需要传 project_id 才能正确更新（与 update_task 一致）。
+        """
+        task = {"id": task_id, "status": 2}
+        if project_id:
+            task["projectId"] = project_id
+        resp = self.session.post(f"{BASE_URL}/task/{task_id}", json=task)
         resp.raise_for_status()
         return resp.status_code == 200
 

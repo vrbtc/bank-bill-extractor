@@ -175,6 +175,17 @@ class TickTickSync:
         existing_map = {t["title"]: t for t in existing_tasks}
         current_titles_set = set(existing_map.keys())
 
+        # 模糊匹配索引：银行缩写 → [task]，用于标题格式变更后仍能匹配到旧任务
+        # 避免重复创建任务（之前标题格式从"💳 浦发银行信用卡还款 ¥..."变成"💳 浦发 ... 元"
+        # 导致精确匹配失败，旧任务残留并在午夜提醒）
+        fuzzy_index = {}
+        for t in existing_tasks:
+            ttitle = t.get("title", "")
+            for full, abbr in self.BANK_ABBR.items():
+                if full in ttitle or abbr in ttitle:
+                    fuzzy_index.setdefault(abbr, []).append(t)
+                    break
+
         # 已完成感知：对比「上次同步时存在的标题」与「本次拉取到的标题」
         # 消失的标题 = 用户手动完成（或手动删除）→ 加入本地 completed_titles
         # 后续同步跳过这些标题，避免重建已完成的任务
@@ -228,6 +239,77 @@ class TickTickSync:
                     print(f"  Update failed for {bank_name}: {e}")
                     skipped.append({"bank": bank_name, "reason": f"更新失败: {e}"})
                 continue
+
+            # 模糊匹配：精确标题没匹配到时，按银行缩写找同银行的任务
+            # 防止标题格式变更导致旧任务残留（午夜提醒 bug 的根因）
+            bank_abbr = self._bank_abbr(bank_name)
+            fuzzy_matches = [t for t in fuzzy_index.get(bank_abbr, [])
+                             if t["title"] not in completed_titles]
+
+            if fuzzy_matches:
+                if len(fuzzy_matches) == 1:
+                    # 恰好1个同银行任务：update它（包括标题、reminders、dueDate）
+                    existing = fuzzy_matches[0]
+                    try:
+                        self.api.update_task(
+                            existing["id"],
+                            project_id=existing.get("projectId", project_id),
+                            title=task["title"],
+                            content=task["content"],
+                            due_date=task["due_date"],
+                            priority=task["priority"],
+                            due_hour=task.get("due_hour", 11),
+                            reminders=task["reminders"],
+                            is_all_day=False
+                        )
+                        updated.append({"bank": bank_name, "task_id": existing["id"],
+                                        "title": task["title"], "fuzzy": True})
+                        print(f"  ↻ 模糊匹配更新: {bank_name} 「{existing['title']}」→「{task['title']}」")
+                    except Exception as e:
+                        print(f"  Fuzzy update failed for {bank_name}: {e}")
+                        skipped.append({"bank": bank_name, "reason": f"模糊匹配更新失败: {e}"})
+                    continue
+                else:
+                    # 多个同银行任务（可能是不同卡/不同月份）：选金额最接近的更新
+                    # 其余的如果标题看起来是旧格式，标记完成清理掉
+                    import re as _re
+                    def _extract_amount(title):
+                        m = _re.search(r'[\d,]+\.?\d*', title.replace(',', ''))
+                        return float(m.group()) if m else 0.0
+                    target_amt = info["total_amount"]
+                    best = min(fuzzy_matches, key=lambda t: abs(_extract_amount(t["title"]) - target_amt))
+                    # 清理其他旧格式任务（标题含"银行信用卡还款"或"¥"的）
+                    cleaned_duplicates = 0
+                    for t in fuzzy_matches:
+                        if t["id"] == best["id"]:
+                            continue
+                        if "银行信用卡还款" in t["title"] or "¥" in t["title"]:
+                            try:
+                                self.api.update_task(t["id"],
+                                    project_id=t.get("projectId", project_id), status=2)
+                                cleaned_duplicates += 1
+                            except Exception:
+                                pass
+                    try:
+                        self.api.update_task(
+                            best["id"],
+                            project_id=best.get("projectId", project_id),
+                            title=task["title"],
+                            content=task["content"],
+                            due_date=task["due_date"],
+                            priority=task["priority"],
+                            due_hour=task.get("due_hour", 11),
+                            reminders=task["reminders"],
+                            is_all_day=False
+                        )
+                        updated.append({"bank": bank_name, "task_id": best["id"],
+                                        "title": task["title"], "fuzzy": True})
+                        if cleaned_duplicates:
+                            print(f"  ↻ 模糊匹配更新 + 清理{cleaned_duplicates}个旧任务: {bank_name}")
+                    except Exception as e:
+                        print(f"  Fuzzy update failed for {bank_name}: {e}")
+                        skipped.append({"bank": bank_name, "reason": f"模糊匹配更新失败: {e}"})
+                    continue
 
             try:
                 result = self.api.create_task(
