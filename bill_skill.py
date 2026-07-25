@@ -76,12 +76,18 @@ class BillSkill:
             with open(self.config_path, 'r', encoding='utf-8') as f:
                 self.config = json.load(f)
             
-            # 验证必要字段
-            required_fields = ['email', 'password', 'imap_server']
-            for field in required_fields:
+            # 验证必要字段（兼容新旧字段名）
+            # 新字段名：email_address / email_password（与 config.example.json 一致）
+            # 旧字段名：email / password（向后兼容）
+            email_key = 'email_address' if 'email_address' in self.config else 'email'
+            password_key = 'email_password' if 'email_password' in self.config else 'password'
+            required = {email_key: '邮箱地址', password_key: '邮箱密码', 'imap_server': 'IMAP服务器'}
+            for field, label in required.items():
                 if field not in self.config:
-                    raise ValueError(f"配置文件缺少必要字段：{field}")
-            
+                    raise ValueError(f"配置文件缺少必要字段：{label}（{field}）")
+                if not self.config[field]:
+                    raise ValueError(f"配置字段不能为空：{label}（{field}）")
+
             return True
         
         except json.JSONDecodeError as e:
@@ -521,26 +527,31 @@ def load_config(config_path: str = 'config.json') -> dict:
 def validate_config(config: dict) -> tuple:
     """
     验证配置文件是否有效
-    
+
     Args:
         config: 配置字典
-    
+
     Returns:
         tuple: (is_valid, error_message)
     """
-    required_fields = ['email', 'password', 'imap_server']
-    
+    # 兼容新旧字段名
+    # 新字段名：email_address / email_password（与 config.example.json 一致）
+    # 旧字段名：email / password（向后兼容）
+    email_key = 'email_address' if 'email_address' in config else 'email'
+    password_key = 'email_password' if 'email_password' in config else 'password'
+    required_fields = [email_key, password_key, 'imap_server']
+
     for field in required_fields:
         if field not in config:
             return (False, f"缺少必要字段：{field}")
-        
+
         if not config[field]:
             return (False, f"字段 '{field}' 不能为空")
-    
+
     # 可选字段
     if 'imap_port' not in config:
         config['imap_port'] = 993
-    
+
     return (True, None)
 
 
