@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-26 04:19:40",
+  "generated_at": "2026-07-27 04:29:13",
   "bills": [
     {
       "subject": "交通银行白金信用卡2026年07月电子账单",
@@ -13,7 +13,13 @@
       "due_dates": [
         "2026-08-15"
       ],
+      "statement_dates": [
+        "2026-06-22"
+      ],
+      "statement_day": null,
+      "credit_limit": 58000.0,
       "bank_name": "交通银行",
+      "last4": "9545",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     },
@@ -29,6 +35,9 @@
       "due_dates": [
         "2026-08-06"
       ],
+      "statement_dates": [],
+      "statement_day": null,
+      "credit_limit": null,
       "bank_name": "招商银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
@@ -45,6 +54,9 @@
       "due_dates": [
         "2026-08-06"
       ],
+      "statement_dates": [],
+      "statement_day": null,
+      "credit_limit": null,
       "bank_name": "招商银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
@@ -61,6 +73,9 @@
       "due_dates": [
         "2026-08-06"
       ],
+      "statement_dates": [],
+      "statement_day": null,
+      "credit_limit": null,
       "bank_name": "招商银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
@@ -77,6 +92,11 @@
       "due_dates": [
         "2026-08-06"
       ],
+      "statement_dates": [
+        "2026-07-17"
+      ],
+      "statement_day": null,
+      "credit_limit": 50000.0,
       "bank_name": "广发银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
@@ -93,6 +113,11 @@
       "due_dates": [
         "2026-08-01"
       ],
+      "statement_dates": [
+        "2026-07-13"
+      ],
+      "statement_day": null,
+      "credit_limit": 10000.0,
       "bank_name": "平安银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
@@ -109,6 +134,12 @@
       "due_dates": [
         "2026-07-31"
       ],
+      "statement_dates": [
+        "2026-07-12",
+        "2026-06-13"
+      ],
+      "statement_day": null,
+      "credit_limit": 96000.0,
       "bank_name": "光大银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
@@ -125,7 +156,13 @@
       "due_dates": [
         "2026-07-30"
       ],
+      "statement_dates": [
+        "2026-07-10"
+      ],
+      "statement_day": null,
+      "credit_limit": 75700.0,
       "bank_name": "兴业银行",
+      "last4": "1561",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     },
@@ -141,6 +178,9 @@
       "due_dates": [
         "2026-07-28"
       ],
+      "statement_dates": [],
+      "statement_day": null,
+      "credit_limit": null,
       "bank_name": "招商银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
@@ -157,7 +197,13 @@
       "due_dates": [
         "2026-07-27"
       ],
+      "statement_dates": [
+        "2026-07-06"
+      ],
+      "statement_day": 6,
+      "credit_limit": 50000.0,
       "bank_name": "邮储银行",
+      "last4": "6983",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     },
@@ -173,6 +219,9 @@
       "due_dates": [
         "2026/07/24"
       ],
+      "statement_dates": [],
+      "statement_day": null,
+      "credit_limit": null,
       "bank_name": "浦发银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
@@ -189,6 +238,9 @@
       "due_dates": [
         "2026-07-06"
       ],
+      "statement_dates": [],
+      "statement_day": null,
+      "credit_limit": null,
       "bank_name": "广发银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
@@ -205,6 +257,9 @@
       "due_dates": [
         "2026-07-19"
       ],
+      "statement_dates": [],
+      "statement_day": null,
+      "credit_limit": 80000.0,
       "bank_name": "工商银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
@@ -221,6 +276,9 @@
       "due_dates": [
         "2026-07-06"
       ],
+      "statement_dates": [],
+      "statement_day": null,
+      "credit_limit": null,
       "bank_name": "广发银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
@@ -237,6 +295,11 @@
       "due_dates": [
         "2026-07-17"
       ],
+      "statement_dates": [
+        "2026-06-27"
+      ],
+      "statement_day": null,
+      "credit_limit": null,
       "bank_name": "民生银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
@@ -254,6 +317,12 @@
         "2026/07/15",
         "2026-05-29"
       ],
+      "statement_dates": [
+        "2026-06-26",
+        "2026-05-27"
+      ],
+      "statement_day": null,
+      "credit_limit": 80000.0,
       "bank_name": "建设银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
