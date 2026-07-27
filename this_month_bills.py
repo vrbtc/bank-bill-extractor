@@ -164,11 +164,27 @@ class BillExtractor:
             'date': date,
             'amounts': [],
             'due_dates': [],
+            'statement_dates': [],
+            'statement_day': None,
+            'credit_limit': None,
             'bank_name': bank_name
         }
         
         extractor.extract_amount(full_text, bill_info)
         extractor.extract_due_date(full_text, bill_info)
+        # 额度 / 账单日：基类通用解析，失败不影响主流程
+        try:
+            extractor.extract_credit_limit(full_text, bill_info)
+        except Exception:
+            pass
+        try:
+            extractor.extract_statement_date(full_text, bill_info)
+        except Exception:
+            pass
+
+        # 若只有 statement_day（如邮储「账单日06」），用邮件日或还款日补全年月
+        if not bill_info.get('statement_dates') and bill_info.get('statement_day'):
+            self._fill_statement_date_from_day(bill_info, date)
         
         if bill_info['amounts'] and not bill_info['due_dates']:
             self._set_default_due_date(bill_info, date)
@@ -178,6 +194,49 @@ class BillExtractor:
             self._print_bill_info(bill_info)
         
         return bills
+
+    def _fill_statement_date_from_day(self, bill_info, email_date_str):
+        """仅有账单日「日」时，结合还款日/邮件日推断完整日期。"""
+        day = bill_info.get('statement_day')
+        if not day:
+            return
+        base = None
+        for due in bill_info.get('due_dates') or []:
+            try:
+                base = datetime.strptime(due.replace('/', '-')[:10], '%Y-%m-%d')
+                break
+            except Exception:
+                continue
+        if base is None:
+            try:
+                email_date = email.utils.parsedate_tz(email_date_str)
+                if email_date:
+                    base = datetime(*email_date[:6])
+            except Exception:
+                pass
+        if base is None:
+            return
+        # 账单日通常在还款日之前：若 day > 还款日 day，则账单在上月
+        y, m = base.year, base.month
+        if bill_info.get('due_dates'):
+            try:
+                due_d = base.day
+                if day > due_d:
+                    m -= 1
+                    if m < 1:
+                        m = 12
+                        y -= 1
+            except Exception:
+                pass
+        try:
+            # 处理月末
+            from calendar import monthrange
+            last = monthrange(y, m)[1]
+            d = min(int(day), last)
+            s = f'{y:04d}-{m:02d}-{d:02d}'
+            bill_info.setdefault('statement_dates', []).append(s)
+        except Exception:
+            pass
     
     def _set_default_due_date(self, bill_info, date):
         """设置默认还款日"""
@@ -198,6 +257,10 @@ class BillExtractor:
             print(f"    金额：{[a['value'] for a in bill_info['amounts']][:3]}")
         if bill_info['due_dates']:
             print(f"    还款日：{bill_info['due_dates'][:3]}")
+        if bill_info.get('credit_limit'):
+            print(f"    额度：{bill_info['credit_limit']:,.0f}")
+        if bill_info.get('statement_dates'):
+            print(f"    账单日：{bill_info['statement_dates'][:2]}")
 
 
 def get_upcoming_bills(bills, days=None, include_overdue_days=3):

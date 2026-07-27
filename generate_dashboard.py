@@ -92,16 +92,63 @@ def generate_dashboard():
                 'status': 'urgent' if days <= 1 else ('warning' if days <= 3 else ('attention' if days <= 7 else 'normal'))
             })
 
+    # 从原始 bills 汇总：额度 / 账单日 / label（按 bank|label 取最新）
+    extra_by_key = {}
+    for bill in bills:
+        bank_name = bill.get('bank_name') or ''
+        label = bill.get('source_label') or ''
+        key = f"{bank_name}|{label}"
+        prev = extra_by_key.get(key) or {}
+        entry = {
+            'bank_name': bank_name,
+            'source_label': label,
+            'credit_limit': bill.get('credit_limit') or prev.get('credit_limit'),
+            'statement_date': None,
+            'statement_day': bill.get('statement_day') or prev.get('statement_day'),
+            'last4': bill.get('last4') or prev.get('last4'),
+        }
+        sdates = bill.get('statement_dates') or []
+        if sdates:
+            entry['statement_date'] = sdates[0]
+        elif prev.get('statement_date'):
+            entry['statement_date'] = prev['statement_date']
+        # 保留更大额度（同卡多次账单）
+        if prev.get('credit_limit') and entry.get('credit_limit'):
+            entry['credit_limit'] = max(float(prev['credit_limit']), float(entry['credit_limit']))
+        elif prev.get('credit_limit') and not entry.get('credit_limit'):
+            entry['credit_limit'] = prev['credit_limit']
+        extra_by_key[key] = entry
+
     all_bills_data = []
     for bank_key, info in sorted(all_upcoming.items(), key=lambda x: x[1]['earliest_due_date']['days_until'] if x[1]['earliest_due_date'] else 999):
         if info['total_amount'] > 0 and info['earliest_due_date']:
             bank_name = info.get('bank_name', bank_key.split('|')[0] if '|' in bank_key else bank_key)
             source_label = info.get('source_label', '')
             display_name = f"{bank_name} ({source_label})" if source_label else bank_name
+            extra = extra_by_key.get(bank_key) or extra_by_key.get(f"{bank_name}|{source_label}") or {}
+            due = info['earliest_due_date']['date']
+            due_day = None
+            try:
+                due_day = int(str(due).replace('/', '-')[8:10])
+            except Exception:
+                pass
+            stmt_date = extra.get('statement_date')
+            stmt_day = extra.get('statement_day')
+            if not stmt_day and stmt_date:
+                try:
+                    stmt_day = int(str(stmt_date)[8:10])
+                except Exception:
+                    pass
             all_bills_data.append({
                 'bank': display_name,
+                'bank_name': bank_name,
+                'source_label': source_label,
                 'amount': info['total_amount'],
-                'due_date': info['earliest_due_date']['date'],
+                'due_date': due,
+                'due_day': due_day,
+                'statement_date': stmt_date,
+                'statement_day': stmt_day,
+                'credit_limit': extra.get('credit_limit'),
                 'days_until': info['earliest_due_date']['days_until'],
                 'status': 'urgent' if info['earliest_due_date']['days_until'] <= 1 else ('warning' if info['earliest_due_date']['days_until'] <= 3 else ('attention' if info['earliest_due_date']['days_until'] <= 7 else 'normal'))
             })

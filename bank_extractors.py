@@ -58,6 +58,126 @@ class BaseBankExtractor(ABC):
         """
         return full_text.replace('&amp;', '&').replace('&yen;', '￥').replace('&nbsp;', ' ')
 
+    def _clean_for_limit(self, full_text):
+        soup = BeautifulSoup(full_text, 'html.parser')
+        text = soup.get_text(separator=' ')
+        text = text.replace('\xa0', ' ').replace('&nbsp;', ' ')
+        text = text.replace('&yen;', '￥').replace('¥', '￥')
+        return ' '.join(text.split())
+
+    @staticmethod
+    def _parse_money_token(token):
+        """解析金额字符串；过滤电话号等伪额度。"""
+        if token is None:
+            return None
+        s = str(token).replace(',', '').replace(' ', '').replace('￥', '').replace('¥', '')
+        try:
+            val = float(s)
+        except Exception:
+            return None
+        # 信用额度合理区间：通常 1000 ~ 500 万
+        if 1000 <= val <= 5_000_000:
+            return val
+        return None
+
+    def extract_credit_limit(self, full_text, bill_info):
+        """
+        提取信用/消费额度（通用实现，子类可覆盖）。
+        写入 bill_info['credit_limit']（float）。
+        """
+        if bill_info.get('credit_limit'):
+            return
+        clean = self._clean_for_limit(full_text)
+        patterns = [
+            # 广发：个人消费额度:50,000.00（优先，勿把卡号末四位当额度）
+            r'个人消费额度\s*[：:]\s*([0-9,]+(?:\.[0-9]+)?)',
+            # 工商：应还款额 最低还款额 信用额度 ... 80,000.00/RMB（第三列）
+            r'应还款额\s*最低还款额\s*信用额度.*?/RMB\s*[0-9,]+\.[0-9]{2}\s*/RMB\s*([0-9,]+\.[0-9]{2})\s*/RMB',
+            r'人民币(?:\(本位币\))?\s*[0-9,]+\.[0-9]{2}\s*/\s*RMB\s*[0-9,]+\.[0-9]{2}\s*/\s*RMB\s*([0-9,]+\.[0-9]{2})\s*/\s*RMB',
+            r'授信额度\s*Credit Limit\s*(?:CNY|￥|¥)?\s*([0-9,]+(?:\.[0-9]+)?)',
+            r'信用额度\s*Credit Limit\s*[￥¥]?\s*([0-9,]+(?:\.[0-9]+)?)',
+            r'信用额度\s*[：:￥¥]?\s*([0-9,]+(?:\.[0-9]+)?)',
+            # 卡片消费额度后若为 4 位整数多半是卡号列，要求带小数
+            r'卡片消费额度\s*[：:￥¥]?\s*([0-9,]+\.[0-9]{2})',
+            r'固定额度\s*[：:￥¥]?\s*([0-9,]+(?:\.[0-9]+)?)',
+            r'信用额度\s*([0-9,]+\.[0-9]{2})',  # 邮储：信用额度 50000.00
+            r'Credit Limit\s*(?:CNY|￥|¥)?\s*([0-9,]+(?:\.[0-9]+)?)',
+            r'个人总授信额度[^\d]{0,40}[￥¥]?\s*([0-9,]+(?:\.[0-9]+)?)',
+        ]
+        # 尝试提取卡号末四位，避免误判为额度
+        last4s = set(re.findall(r'(?:卡号)?末四位\s*(\d{4})', clean))
+        last4s.update(re.findall(r'尾号\s*[为是]?\s*(\d{4})', clean))
+        for pat in patterns:
+            m = re.search(pat, clean, re.IGNORECASE)
+            if not m:
+                continue
+            raw = m.group(1).replace(',', '').replace(' ', '')
+            # 纯 4 位整数且等于末四位 → 跳过
+            if re.fullmatch(r'\d{4}', raw) and raw in last4s:
+                continue
+            if re.fullmatch(r'\d{4}', raw) and float(raw) < 10000:
+                # 广发表头「卡片消费额度 8948」是卡号，不是额度
+                continue
+            val = self._parse_money_token(m.group(1))
+            if val is not None:
+                bill_info['credit_limit'] = val
+                # 同时记下末四位供展示
+                if last4s and not bill_info.get('last4'):
+                    bill_info['last4'] = next(iter(last4s))
+                return
+        if last4s and not bill_info.get('last4'):
+            bill_info['last4'] = next(iter(last4s))
+
+    def extract_statement_date(self, full_text, bill_info):
+        """
+        提取账单日/出账日（通用实现）。
+        写入 bill_info['statement_dates'] 列表（YYYY-MM-DD）。
+        """
+        if 'statement_dates' not in bill_info:
+            bill_info['statement_dates'] = []
+        clean = self._clean_for_limit(full_text)
+
+        def _norm(date_str):
+            s = date_str.replace('年', '-').replace('月', '-').replace('日', '')
+            s = s.replace('/', '-').replace('.', '-')
+            parts = [p for p in s.split('-') if p]
+            if len(parts) != 3:
+                return None
+            try:
+                y, m, d = int(parts[0]), int(parts[1]), int(parts[2])
+                dt = datetime(y, m, d)
+                return dt.strftime('%Y-%m-%d')
+            except Exception:
+                return None
+
+        patterns = [
+            # 邮储：账单周期为【2026/02/07-2026/03/06】→ 取周期末日作为账单日
+            r'账单周期为【\d{4}[-/.]\d{1,2}[-/.]\d{1,2}-(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})】',
+            r'账单日\s*Statement Date[^0-9]{0,20}(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)',
+            r'账单日\s*Statement Date[^0-9]{0,20}(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})',
+            r'账单日[：:\s]*(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)',
+            r'账单日[：:\s]*(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})',
+            r'账单日\s*(\d{1,2})\s*本期',  # 邮储：账单日 06 本期
+            r'出账日[：:\s]*(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})',
+            r'Statement Date[：:\s]*(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})',
+            r'账单周期\s*Statement Cycle\s*(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})',
+            r'Statement Cycle\s*(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})',
+            r'结账日[：:\s]*(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})',
+        ]
+        for pat in patterns:
+            for m in re.finditer(pat, clean, re.IGNORECASE):
+                g = m.group(1).strip()
+                # 仅日数字（邮储账单日06）
+                if re.fullmatch(r'\d{1,2}', g):
+                    # 结合邮件 Date 或 due_dates 推断年月，先存 day_only
+                    day = int(g)
+                    if 1 <= day <= 31:
+                        bill_info['statement_day'] = day
+                    continue
+                norm = _norm(g)
+                if norm and norm not in bill_info['statement_dates']:
+                    bill_info['statement_dates'].append(norm)
+
 
 class GuangfaBankExtractor(BaseBankExtractor):
     """广发银行提取器"""
