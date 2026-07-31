@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-30 03:48:31",
+  "generated_at": "2026-07-31 04:15:17",
   "bills": [
     {
       "subject": "民生信用卡2026年07月电子对账单",
@@ -305,25 +305,6 @@
       "statement_day": null,
       "credit_limit": 80000.0,
       "bank_name": "工商银行",
-      "source_label": "",
-      "source_email": "rrking@aliyun.com"
-    },
-    {
-      "subject": "【广发卡 06月还款提醒】",
-      "date": "Wed, 01 Jul 2026 08:45:54 +0800",
-      "amounts": [
-        {
-          "value": 10048.23,
-          "currency": "CNY"
-        }
-      ],
-      "due_dates": [
-        "2026-07-06"
-      ],
-      "statement_dates": [],
-      "statement_day": null,
-      "credit_limit": null,
-      "bank_name": "广发银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     }
