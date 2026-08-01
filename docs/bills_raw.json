@@ -1,6 +1,25 @@
 {
-  "generated_at": "2026-07-31 04:15:17",
+  "generated_at": "2026-08-01 04:17:16",
   "bills": [
+    {
+      "subject": "【广发卡 07月还款提醒】",
+      "date": "Sat, 01 Aug 2026 09:17:55 +0800",
+      "amounts": [
+        {
+          "value": 1544.05,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-08-06"
+      ],
+      "statement_dates": [],
+      "statement_day": null,
+      "credit_limit": null,
+      "bank_name": "广发银行",
+      "source_label": "",
+      "source_email": "rrking@aliyun.com"
+    },
     {
       "subject": "民生信用卡2026年07月电子对账单",
       "date": "Tue, 28 Jul 2026 14:32:33 +0800 (CST)",
@@ -286,25 +305,6 @@
       "statement_day": null,
       "credit_limit": null,
       "bank_name": "广发银行",
-      "source_label": "",
-      "source_email": "rrking@aliyun.com"
-    },
-    {
-      "subject": "中国工商银行客户对账单(ICBC Peony Card Bank Statement)",
-      "date": "Thu, 2 Jul 2026 09:19:12 +0800 (CST)",
-      "amounts": [
-        {
-          "value": 22212.13,
-          "currency": "CNY"
-        }
-      ],
-      "due_dates": [
-        "2026-07-19"
-      ],
-      "statement_dates": [],
-      "statement_day": null,
-      "credit_limit": 80000.0,
-      "bank_name": "工商银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     }

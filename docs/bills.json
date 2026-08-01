@@ -1,83 +1,77 @@
 {
-  "generated_at": "2026-07-31 04:15:17",
+  "generated_at": "2026-08-01 04:17:16",
   "total_bills": 15,
-  "total_amount": 119500.8,
+  "total_amount": 118211.52,
   "bank_count": 8,
-  "urgent_count": 4,
+  "urgent_count": 3,
   "banks": [
-    {
-      "name": "招商银行|",
-      "amount": 24972.65,
-      "due_date": "2026-07-28",
-      "days_until": -3
-    },
     {
       "name": "兴业银行|",
       "amount": 9204.48,
       "due_date": "2026-07-30",
-      "days_until": -1
+      "days_until": -2
     },
     {
       "name": "光大银行|",
       "amount": 7654.09,
       "due_date": "2026-07-31",
-      "days_until": 0
+      "days_until": -1
     },
     {
       "name": "平安银行|",
       "amount": 6613.59,
       "due_date": "2026-08-01",
-      "days_until": 1
+      "days_until": 0
     },
     {
       "name": "广发银行|",
-      "amount": 1544.05,
+      "amount": 3088.1,
       "due_date": "2026-08-06",
-      "days_until": 6
+      "days_until": 5
+    },
+    {
+      "name": "招商银行|",
+      "amount": 22139.32,
+      "due_date": "2026-08-06",
+      "days_until": 5
     },
     {
       "name": "建设银行|",
       "amount": 6782.23,
       "due_date": "2026-08-15",
-      "days_until": 15
+      "days_until": 14
     },
     {
       "name": "交通银行|",
       "amount": 32950.34,
       "due_date": "2026-08-15",
-      "days_until": 15
+      "days_until": 14
     },
     {
       "name": "民生银行|",
       "amount": 29779.37,
       "due_date": "2026-08-16",
-      "days_until": 16
+      "days_until": 15
     }
   ],
   "urgent": [
     {
-      "name": "招商银行|",
-      "amount": 24972.65,
-      "due_date": "2026-07-28",
-      "days_until": -3
-    },
-    {
       "name": "兴业银行|",
       "amount": 9204.48,
       "due_date": "2026-07-30",
-      "days_until": -1
+      "days_until": -2
     },
     {
       "name": "光大银行|",
       "amount": 7654.09,
       "due_date": "2026-07-31",
-      "days_until": 0
+      "days_until": -1
     },
     {
       "name": "平安银行|",
       "amount": 6613.59,
       "due_date": "2026-08-01",
-      "days_until": 1
+      "days_until": 0
     }
   ]
 }
