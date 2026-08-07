@@ -1,6 +1,28 @@
 {
-  "generated_at": "2026-08-06 03:56:17",
+  "generated_at": "2026-08-07 03:42:07",
   "bills": [
+    {
+      "subject": "邮储银行信用卡电子账单",
+      "date": "Fri, 07 Aug 2026 11:08:52 +0800",
+      "amounts": [
+        {
+          "value": 18918.38,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-08-27"
+      ],
+      "statement_dates": [
+        "2026-08-06"
+      ],
+      "statement_day": 6,
+      "credit_limit": 50000.0,
+      "bank_name": "邮储银行",
+      "last4": "6983",
+      "source_label": "",
+      "source_email": "rrking@aliyun.com"
+    },
     {
       "subject": "浦发银行-信用卡电子账单",
       "date": "Wed, 5 Aug 2026 12:35:48 +0800 (CST)",
