@@ -323,6 +323,14 @@ def get_upcoming_bills(bills, days=None, include_overdue_days=3):
 
         if best_due_date and best_days_until is not None:
             for amount_info in bill.get('amounts', []):
+                # 去重：同一银行同一 label 下，金额+还款日完全相同视为重复账单
+                # （常见于原件 + Fw: 转发件内容一致，会导致金额翻倍）
+                is_dup = any(
+                    a['value'] == amount_info['value'] and a['due_date'] == best_due_date
+                    for a in bank_info['amounts']
+                )
+                if is_dup:
+                    continue
                 bank_info['amounts'].append({
                     'value': amount_info['value'],
                     'due_date': best_due_date,

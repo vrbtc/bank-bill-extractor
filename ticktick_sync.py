@@ -148,6 +148,14 @@ class TickTickSync:
                         "details": []
                     }
                 for amount_info in bill.get("amounts", []):
+                    # 去重：同一银行同一 label 下，金额+还款日完全相同视为重复账单
+                    # （常见于原件 + Fw: 转发件内容一致，会导致金额翻倍）
+                    is_dup = any(
+                        d["amount"] == amount_info["value"]
+                        for d in upcoming[upcoming_key]["details"]
+                    )
+                    if is_dup:
+                        continue
                     upcoming[upcoming_key]["total_amount"] += amount_info["value"]
                     upcoming[upcoming_key]["details"].append({
                         "subject": bill["subject"],
