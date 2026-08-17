@@ -180,6 +180,15 @@ class TickTickSync:
 
         project_id = self.api.find_or_create_project(project_name)
         existing_tasks = self.api.get_project_tasks(project_id)
+
+        # 主动清理旧格式任务：标题含"银行信用卡还款"或"¥+千分位逗号"的视为旧格式
+        # 根因：新格式任务命中精确匹配后直接 continue，旧格式任务永远到不了 fuzzy 清理分支
+        # 这里在所有匹配逻辑之前主动扫描并清理，确保新旧格式不会并存
+        cleaned_legacy = self._cleanup_legacy_format_tasks(existing_tasks, project_id)
+        if cleaned_legacy:
+            # 清理后重新拉取一次，避免对已删除任务做后续匹配
+            existing_tasks = self.api.get_project_tasks(project_id)
+
         existing_map = {t["title"]: t for t in existing_tasks}
         current_titles_set = set(existing_map.keys())
 
@@ -426,6 +435,82 @@ class TickTickSync:
         project_id = self.api.find_or_create_project(project_name)
         tasks = self.api.get_project_tasks(project_id)
         return {"deleted": 0, "remaining": len(tasks)}
+
+    @staticmethod
+    def _is_legacy_format_title(title):
+        """判断任务标题是否为旧格式。
+
+        旧格式特征（满足任一即视为旧格式）：
+        1. 标题含"银行信用卡还款"（如 "💳 招商银行信用卡还款 ¥2,833.33"）
+        2. 标题含"¥"且金额带千分位逗号（如 "💳 招行 ¥2,833.33"）
+
+        新格式标准："💳 银行缩写 金额 元"（如 "💳 招行 2833.33 元"）
+        """
+        if not title:
+            return False
+        # 旧格式特征1：完整银行名 + "信用卡还款"
+        if "银行信用卡还款" in title:
+            return True
+        # 旧格式特征2：含 ¥ 且金额带千分位逗号
+        if "¥" in title and "," in title:
+            return True
+        return False
+
+    def _cleanup_legacy_format_tasks(self, existing_tasks, project_id):
+        """主动清理旧格式任务。
+
+        策略：扫描 existing_tasks，对每个旧格式任务：
+        - 若存在同银行的新格式任务（标题含银行缩写且不含旧格式特征）→ 删除旧格式任务
+        - 若不存在新格式对应任务 → 跳过（避免丢失账单，打印警告）
+
+        返回清理的任务数量。
+        """
+        legacy_tasks = [t for t in existing_tasks if self._is_legacy_format_title(t.get("title", ""))]
+        if not legacy_tasks:
+            return 0
+
+        new_format_tasks = [t for t in existing_tasks if not self._is_legacy_format_title(t.get("title", ""))]
+        # 按银行缩写索引新格式任务
+        new_format_by_abbr = {}
+        for t in new_format_tasks:
+            ttitle = t.get("title", "")
+            for full, abbr in self.BANK_ABBR.items():
+                if full in ttitle or abbr in ttitle:
+                    new_format_by_abbr.setdefault(abbr, []).append(t)
+                    break
+
+        cleaned = 0
+        for legacy in legacy_tasks:
+            legacy_title = legacy.get("title", "")
+            # 找出旧格式任务对应的银行缩写
+            legacy_abbr = None
+            for full, abbr in self.BANK_ABBR.items():
+                if full in legacy_title or abbr in legacy_title:
+                    legacy_abbr = abbr
+                    break
+
+            if legacy_abbr is None:
+                print(f"  ⚠ 旧格式任务无法识别银行，跳过: 「{legacy_title}」")
+                continue
+
+            # 检查是否存在同银行的新格式任务
+            if legacy_abbr in new_format_by_abbr and new_format_by_abbr[legacy_abbr]:
+                new_match = new_format_by_abbr[legacy_abbr][0]
+                try:
+                    self.api.delete_task(
+                        legacy["id"],
+                        project_id=legacy.get("projectId", project_id)
+                    )
+                    cleaned += 1
+                    print(f"  🗑 清理旧格式任务: 「{legacy_title}」→ 保留 「{new_match.get('title', '')}」")
+                except Exception as e:
+                    print(f"  ✗ 清理失败: 「{legacy_title}」: {e}")
+            else:
+                # 无新格式对应：可能是这个银行本月有账单但 sync 还没创建新格式
+                # 不删除，让正常 sync 流程通过 fuzzy 匹配把它转成新格式
+                print(f"  ℹ 旧格式任务暂无新格式对应（等待 sync 转换）: 「{legacy_title}」")
+
+        return cleaned
 
 
 if __name__ == "__main__":
