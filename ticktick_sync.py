@@ -117,6 +117,11 @@ class TickTickSync:
             if not bank_name:
                 continue
 
+            # 跳过无金额的账单（提取失败或纯通知邮件，会污染 due_date）
+            amounts = bill.get("amounts", [])
+            if not amounts:
+                continue
+
             # 多邮箱模式：同银行不同邮箱分开存（用 bank_name|label 作为 key）
             source_label = bill.get("source_label", "")
             upcoming_key = f"{bank_name}|{source_label}"
@@ -147,7 +152,16 @@ class TickTickSync:
                         "days_until": best_days,
                         "details": []
                     }
-                for amount_info in bill.get("amounts", []):
+                else:
+                    # 同银行多条账单合并：取更接近今天的 due_date
+                    # （避免空金额的旧账单 due_date 覆盖正确账单的 due_date）
+                    if abs(best_days) < abs(upcoming[upcoming_key]["days_until"]) or (
+                        abs(best_days) == abs(upcoming[upcoming_key]["days_until"])
+                        and best_days > upcoming[upcoming_key]["days_until"]
+                    ):
+                        upcoming[upcoming_key]["due_date"] = best_due_date
+                        upcoming[upcoming_key]["days_until"] = best_days
+                for amount_info in amounts:
                     # 去重：同一银行同一 label 下，金额+还款日完全相同视为重复账单
                     # （常见于原件 + Fw: 转发件内容一致，会导致金额翻倍）
                     is_dup = any(
