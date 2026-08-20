@@ -1,6 +1,28 @@
 {
-  "generated_at": "2026-08-19 02:10:01",
+  "generated_at": "2026-08-20 02:08:48",
   "bills": [
+    {
+      "subject": "邮储银行信用卡电子账单",
+      "date": "Mon, 17 Aug 2026 13:50:06 +0800",
+      "amounts": [
+        {
+          "value": 2269.66,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-09-06"
+      ],
+      "statement_dates": [
+        "2026-08-16"
+      ],
+      "statement_day": 16,
+      "credit_limit": 125000.0,
+      "bank_name": "邮储银行",
+      "last4": "4321",
+      "source_label": "",
+      "source_email": "rrking@aliyun.com"
+    },
     {
       "subject": "招商银行分期信用卡电子账单",
       "date": "Wed, 19 Aug 2026 09:54:45 +0800 (CST)",
