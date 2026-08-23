@@ -1,77 +1,65 @@
 {
-  "generated_at": "2026-08-22 02:06:48",
+  "generated_at": "2026-08-23 02:16:21",
   "total_bills": 17,
-  "total_amount": 217676.06,
-  "bank_count": 9,
-  "urgent_count": 2,
+  "total_amount": 208031.68,
+  "bank_count": 8,
+  "urgent_count": 1,
   "banks": [
-    {
-      "name": "工商银行|",
-      "amount": 9644.38,
-      "due_date": "2026-08-19",
-      "days_until": -3
-    },
     {
       "name": "浦发银行|",
       "amount": 9312.73,
       "due_date": "2026-08-24",
-      "days_until": 2
+      "days_until": 1
     },
     {
       "name": "邮储银行|",
       "amount": 21188.04,
       "due_date": "2026-08-27",
-      "days_until": 5
+      "days_until": 4
     },
     {
       "name": "招商银行|",
       "amount": 9327.57,
       "due_date": "2026-08-28",
-      "days_until": 6
+      "days_until": 5
     },
     {
       "name": "兴业银行|",
       "amount": 54342.68,
       "due_date": "2026-08-30",
-      "days_until": 8
+      "days_until": 7
     },
     {
       "name": "光大银行|",
       "amount": 57482.0,
       "due_date": "2026-08-31",
-      "days_until": 9
+      "days_until": 8
     },
     {
       "name": "平安银行|",
       "amount": 4015.43,
       "due_date": "2026-09-01",
-      "days_until": 10
+      "days_until": 9
     },
     {
       "name": "广发银行|",
       "amount": 259.95,
       "due_date": "2026-09-06",
-      "days_until": 15
+      "days_until": 14
     },
     {
       "name": "交通银行|",
       "amount": 52103.28,
       "due_date": "2026-09-15",
-      "days_until": 24
+      "days_until": 23
     }
   ],
   "urgent": [
     {
-      "name": "工商银行|",
-      "amount": 9644.38,
-      "due_date": "2026-08-19",
-      "days_until": -3
-    },
-    {
       "name": "浦发银行|",
       "amount": 9312.73,
       "due_date": "2026-08-24",
-      "days_until": 2
+      "days_until": 1
     }
   ]
 }
