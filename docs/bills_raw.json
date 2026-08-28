@@ -1,6 +1,29 @@
 {
-  "generated_at": "2026-08-27 10:42:05",
+  "generated_at": "2026-08-28 12:19:45",
   "bills": [
+    {
+      "subject": "中国建设银行信用卡电子账单",
+      "date": "Thu, 27 Aug 2026 19:24:05 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 22322.3,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026/09/15",
+        "2026-08-08"
+      ],
+      "statement_dates": [
+        "2026-08-26",
+        "2026-07-27"
+      ],
+      "statement_day": null,
+      "credit_limit": 80000.0,
+      "bank_name": "建设银行",
+      "source_label": "",
+      "source_email": "rrking@aliyun.com"
+    },
     {
       "subject": "交通银行白金信用卡2026年08月电子账单",
       "date": "Sat, 22 Aug 2026 02:44:04 +0800",
@@ -19,7 +42,7 @@
       "statement_day": null,
       "credit_limit": 58000.0,
       "bank_name": "交通银行",
-      "last4": "9545",
+      "last4": "7996",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     },
