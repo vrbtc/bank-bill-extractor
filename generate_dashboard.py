@@ -387,8 +387,10 @@ def build_html(data_json):
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
-.container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+.container { max-width: 960px; margin: 0 auto; padding: 24px 16px; position: relative; }
 .header { text-align: center; margin-bottom: 32px; }
+.nav-link { position: absolute; top: 28px; right: 16px; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; background: #1e293b; border: 1px solid #334155; color: #60a5fa; text-decoration: none; font-size: 13px; font-weight: 600; transition: all 0.2s; z-index: 10; }
+.nav-link:hover { border-color: #60a5fa; background: #334155; }
 .header h1 { font-size: 28px; font-weight: 700; background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px; }
 .header .subtitle { color: #94a3b8; font-size: 14px; }
 .header .update-time { color: #64748b; font-size: 12px; margin-top: 4px; }
