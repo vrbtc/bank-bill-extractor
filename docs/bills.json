@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-29 07:29:56",
+  "generated_at": "2026-08-30 05:59:30",
   "total_bills": 16,
   "total_amount": 221041.25,
   "bank_count": 8,
@@ -9,49 +9,49 @@
       "name": "邮储银行|",
       "amount": 21188.04,
       "due_date": "2026-08-27",
-      "days_until": -2
+      "days_until": -3
     },
     {
       "name": "招商银行|",
       "amount": 9327.57,
       "due_date": "2026-08-28",
-      "days_until": -1
+      "days_until": -2
     },
     {
       "name": "兴业银行|",
       "amount": 54342.68,
       "due_date": "2026-08-30",
-      "days_until": 1
+      "days_until": 0
     },
     {
       "name": "光大银行|",
       "amount": 57482.0,
       "due_date": "2026-08-31",
-      "days_until": 2
+      "days_until": 1
     },
     {
       "name": "平安银行|",
       "amount": 4015.43,
       "due_date": "2026-09-01",
-      "days_until": 3
+      "days_until": 2
     },
     {
       "name": "广发银行|",
       "amount": 259.95,
       "due_date": "2026-09-06",
-      "days_until": 8
+      "days_until": 7
     },
     {
       "name": "建设银行|",
       "amount": 22322.3,
       "due_date": "2026-09-15",
-      "days_until": 17
+      "days_until": 16
     },
     {
       "name": "交通银行|",
       "amount": 52103.28,
       "due_date": "2026-09-15",
-      "days_until": 17
+      "days_until": 16
     }
   ],
   "urgent": [
@@ -59,31 +59,31 @@
       "name": "邮储银行|",
       "amount": 21188.04,
       "due_date": "2026-08-27",
-      "days_until": -2
+      "days_until": -3
     },
     {
       "name": "招商银行|",
       "amount": 9327.57,
       "due_date": "2026-08-28",
-      "days_until": -1
+      "days_until": -2
     },
     {
       "name": "兴业银行|",
       "amount": 54342.68,
       "due_date": "2026-08-30",
-      "days_until": 1
+      "days_until": 0
     },
     {
       "name": "光大银行|",
       "amount": 57482.0,
       "due_date": "2026-08-31",
-      "days_until": 2
+      "days_until": 1
     },
     {
       "name": "平安银行|",
       "amount": 4015.43,
       "due_date": "2026-09-01",
-      "days_until": 3
+      "days_until": 2
     }
   ]
 }
