@@ -444,6 +444,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Ping
 </head>
 <body>
 <div class="container">
+  <a class="nav-link" href="https://vrbtc.github.io/credit-card-planner/" title="打开现金流日历">&#x1F4C5; 现金流日历 &rarr;</a>
   <div class="header">
     <h1>&#x1F3E6; 银行账单仪表盘</h1>
     <div class="subtitle">定时从邮箱提取（每日 11:00 / 17:00 北京时间），查看待还款账单</div>
