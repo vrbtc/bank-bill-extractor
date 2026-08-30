@@ -439,6 +439,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Ping
   .stat-card .value { font-size: 22px; }
   .bill-card { flex-direction: column; align-items: flex-start; gap: 8px; }
   .bill-right { text-align: left; }
+  .nav-link { position: static; margin-top: 12px; }
 }
 </style>
 </head>
