@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-30 05:59:30",
+  "generated_at": "2026-08-31 06:19:55",
   "bills": [
     {
       "subject": "中国建设银行信用卡电子账单",
@@ -42,7 +42,7 @@
       "statement_day": null,
       "credit_limit": 58000.0,
       "bank_name": "交通银行",
-      "last4": "9545",
+      "last4": "7996",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     },
@@ -301,25 +301,6 @@
       "statement_day": null,
       "credit_limit": 80000.0,
       "bank_name": "工商银行",
-      "source_label": "",
-      "source_email": "rrking@aliyun.com"
-    },
-    {
-      "subject": "【广发卡 07月还款提醒】",
-      "date": "Sat, 01 Aug 2026 09:17:55 +0800",
-      "amounts": [
-        {
-          "value": 1544.05,
-          "currency": "CNY"
-        }
-      ],
-      "due_dates": [
-        "2026-08-06"
-      ],
-      "statement_dates": [],
-      "statement_day": null,
-      "credit_limit": null,
-      "bank_name": "广发银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     }
