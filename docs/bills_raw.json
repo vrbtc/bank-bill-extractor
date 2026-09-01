@@ -1,6 +1,25 @@
 {
-  "generated_at": "2026-08-31 06:19:55",
+  "generated_at": "2026-09-01 05:48:02",
   "bills": [
+    {
+      "subject": "【广发卡 08月还款提醒】",
+      "date": "Tue, 01 Sep 2026 08:31:54 +0800",
+      "amounts": [
+        {
+          "value": 259.95,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-09-06"
+      ],
+      "statement_dates": [],
+      "statement_day": null,
+      "credit_limit": null,
+      "bank_name": "广发银行",
+      "source_label": "",
+      "source_email": "rrking@aliyun.com"
+    },
     {
       "subject": "中国建设银行信用卡电子账单",
       "date": "Thu, 27 Aug 2026 19:24:05 +0800 (CST)",
@@ -282,25 +301,6 @@
       "statement_day": null,
       "credit_limit": null,
       "bank_name": "广发银行",
-      "source_label": "",
-      "source_email": "rrking@aliyun.com"
-    },
-    {
-      "subject": "中国工商银行客户对账单(ICBC Peony Card Bank Statement)",
-      "date": "Sun, 2 Aug 2026 09:16:29 +0800 (CST)",
-      "amounts": [
-        {
-          "value": 9644.38,
-          "currency": "CNY"
-        }
-      ],
-      "due_dates": [
-        "2026-08-19"
-      ],
-      "statement_dates": [],
-      "statement_day": null,
-      "credit_limit": 80000.0,
-      "bank_name": "工商银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     }
