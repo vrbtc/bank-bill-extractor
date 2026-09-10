@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-09 05:26:55",
+  "generated_at": "2026-09-10 05:23:57",
   "bills": [
     {
       "subject": "邮储银行信用卡电子账单",
@@ -140,7 +140,7 @@
       "statement_day": null,
       "credit_limit": 58000.0,
       "bank_name": "交通银行",
-      "last4": "7996",
+      "last4": "9545",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     },
@@ -301,25 +301,6 @@
       "credit_limit": 75700.0,
       "bank_name": "兴业银行",
       "last4": "1561",
-      "source_label": "",
-      "source_email": "rrking@aliyun.com"
-    },
-    {
-      "subject": "招商银行信用卡中心消费信贷账单",
-      "date": "Tue, 11 Aug 2026 12:36:08 +0800 (CST)",
-      "amounts": [
-        {
-          "value": 2833.33,
-          "currency": "CNY"
-        }
-      ],
-      "due_dates": [
-        "2026-08-28"
-      ],
-      "statement_dates": [],
-      "statement_day": null,
-      "credit_limit": null,
-      "bank_name": "招商银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     }
