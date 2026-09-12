@@ -1,6 +1,28 @@
 {
-  "generated_at": "2026-09-11 05:21:43",
+  "generated_at": "2026-09-12 05:12:20",
   "bills": [
+    {
+      "subject": "兴业银行信用卡2026年09月电子账单",
+      "date": "Fri, 11 Sep 2026 13:51:41 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 19427.61,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-09-30"
+      ],
+      "statement_dates": [
+        "2026-09-10"
+      ],
+      "statement_day": null,
+      "credit_limit": 75700.0,
+      "bank_name": "兴业银行",
+      "last4": "1561",
+      "source_label": "",
+      "source_email": "rrking@aliyun.com"
+    },
     {
       "subject": "招商银行信用卡中心消费信贷账单",
       "date": "Fri, 11 Sep 2026 12:51:55 +0800 (CST)",
@@ -159,7 +181,7 @@
       "statement_day": null,
       "credit_limit": 58000.0,
       "bank_name": "交通银行",
-      "last4": "9545",
+      "last4": "7996",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     },
