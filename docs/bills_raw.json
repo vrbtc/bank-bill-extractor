@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-13 05:27:15",
+  "generated_at": "2026-09-14 05:32:11",
   "bills": [
     {
       "subject": "兴业银行信用卡2026年09月电子账单",
@@ -277,27 +277,6 @@
       "statement_day": null,
       "credit_limit": 50000.0,
       "bank_name": "广发银行",
-      "source_label": "",
-      "source_email": "rrking@aliyun.com"
-    },
-    {
-      "subject": "平安信用卡电子账单",
-      "date": "Fri, 14 Aug 2026 18:20:03 +0800 (CST)",
-      "amounts": [
-        {
-          "value": 4015.43,
-          "currency": "CNY"
-        }
-      ],
-      "due_dates": [
-        "2026-09-01"
-      ],
-      "statement_dates": [
-        "2026-08-13"
-      ],
-      "statement_day": null,
-      "credit_limit": 10000.0,
-      "bank_name": "平安银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     }
