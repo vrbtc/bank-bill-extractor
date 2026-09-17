@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-16 05:24:11",
+  "generated_at": "2026-09-17 05:33:15",
   "bills": [
     {
       "subject": "光大信用卡电子账单",
@@ -224,7 +224,7 @@
       "statement_day": null,
       "credit_limit": 58000.0,
       "bank_name": "交通银行",
-      "last4": "9545",
+      "last4": "7996",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     },
@@ -299,27 +299,6 @@
       "statement_day": null,
       "credit_limit": null,
       "bank_name": "招商银行",
-      "source_label": "",
-      "source_email": "rrking@aliyun.com"
-    },
-    {
-      "subject": "广发信用卡 2026年08月电子账单",
-      "date": "Tue, 18 Aug 2026 10:50:15 +0800",
-      "amounts": [
-        {
-          "value": 259.95,
-          "currency": "CNY"
-        }
-      ],
-      "due_dates": [
-        "2026-09-06"
-      ],
-      "statement_dates": [
-        "2026-08-17"
-      ],
-      "statement_day": null,
-      "credit_limit": 50000.0,
-      "bank_name": "广发银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     }
