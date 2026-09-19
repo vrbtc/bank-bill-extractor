@@ -1,6 +1,44 @@
 {
-  "generated_at": "2026-09-18 05:20:50",
+  "generated_at": "2026-09-19 05:13:24",
   "bills": [
+    {
+      "subject": "招商银行信用卡电子账单",
+      "date": "Sat, 19 Sep 2026 10:01:48 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 18875.25,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-10-06"
+      ],
+      "statement_dates": [],
+      "statement_day": null,
+      "credit_limit": null,
+      "bank_name": "招商银行",
+      "source_label": "",
+      "source_email": "rrking@aliyun.com"
+    },
+    {
+      "subject": "招商银行分期信用卡电子账单",
+      "date": "Sat, 19 Sep 2026 10:01:25 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 2787.26,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-10-06"
+      ],
+      "statement_dates": [],
+      "statement_day": null,
+      "credit_limit": null,
+      "bank_name": "招商银行",
+      "source_label": "",
+      "source_email": "rrking@aliyun.com"
+    },
     {
       "subject": "广发信用卡 2026年09月电子账单",
       "date": "Fri, 18 Sep 2026 10:44:14 +0800",
@@ -245,29 +283,7 @@
       "statement_day": null,
       "credit_limit": 58000.0,
       "bank_name": "交通银行",
-      "last4": "9545",
-      "source_label": "",
-      "source_email": "rrking@aliyun.com"
-    },
-    {
-      "subject": "邮储银行信用卡电子账单",
-      "date": "Mon, 17 Aug 2026 13:50:06 +0800",
-      "amounts": [
-        {
-          "value": 2269.66,
-          "currency": "CNY"
-        }
-      ],
-      "due_dates": [
-        "2026-09-06"
-      ],
-      "statement_dates": [
-        "2026-08-16"
-      ],
-      "statement_day": 16,
-      "credit_limit": 125000.0,
-      "bank_name": "邮储银行",
-      "last4": "4321",
+      "last4": "7996",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     }
