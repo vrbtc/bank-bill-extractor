@@ -1,6 +1,50 @@
 {
-  "generated_at": "2026-09-27 05:55:21",
+  "generated_at": "2026-09-28 06:01:19",
   "bills": [
+    {
+      "subject": "民生信用卡2026年09月电子对账单",
+      "date": "Mon, 28 Sep 2026 13:13:22 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 24305.66,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-10-17"
+      ],
+      "statement_dates": [
+        "2026-09-27"
+      ],
+      "statement_day": null,
+      "credit_limit": null,
+      "bank_name": "民生银行",
+      "source_label": "",
+      "source_email": "rrking@aliyun.com"
+    },
+    {
+      "subject": "中国建设银行信用卡电子账单",
+      "date": "Sun, 27 Sep 2026 19:01:32 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 61955.74,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026/10/15",
+        "2026-08-29"
+      ],
+      "statement_dates": [
+        "2026-09-26",
+        "2026-08-27"
+      ],
+      "statement_day": null,
+      "credit_limit": 80000.0,
+      "bank_name": "建设银行",
+      "source_label": "",
+      "source_email": "rrking@aliyun.com"
+    },
     {
       "subject": "交通银行白金信用卡2026年09月电子账单",
       "date": "Tue, 22 Sep 2026 07:37:27 +0800",
@@ -19,7 +63,7 @@
       "statement_day": null,
       "credit_limit": 58000.0,
       "bank_name": "交通银行",
-      "last4": "8424",
+      "last4": "3318",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     },
