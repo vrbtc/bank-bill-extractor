@@ -1,100 +1,94 @@
 {
-  "generated_at": "2026-10-03 05:51:37",
+  "generated_at": "2026-10-04 06:28:12",
   "total_bills": 16,
-  "total_amount": 244567.96,
-  "bank_count": 10,
+  "total_amount": 225140.35,
+  "bank_count": 9,
   "urgent_count": 5,
   "banks": [
-    {
-      "name": "兴业银行|",
-      "amount": 19427.61,
-      "due_date": "2026-09-30",
-      "days_until": -3
-    },
     {
       "name": "光大银行|",
       "amount": 16602.57,
       "due_date": "2026-10-01",
-      "days_until": -2
+      "days_until": -3
     },
     {
       "name": "平安银行|",
       "amount": 6989.78,
       "due_date": "2026-10-01",
-      "days_until": -2
+      "days_until": -3
     },
     {
       "name": "广发银行|",
       "amount": 48611.36,
       "due_date": "2026-10-06",
-      "days_until": 3
+      "days_until": 2
     },
     {
       "name": "招商银行|",
       "amount": 21662.510000000002,
       "due_date": "2026-10-06",
-      "days_until": 3
+      "days_until": 2
     },
     {
       "name": "邮储银行|",
       "amount": 2269.63,
       "due_date": "2026-10-07",
-      "days_until": 4
+      "days_until": 3
     },
     {
       "name": "建设银行|",
       "amount": 61955.74,
       "due_date": "2026-10-15",
-      "days_until": 12
+      "days_until": 11
     },
     {
       "name": "交通银行|",
       "amount": 5541.79,
       "due_date": "2026-10-15",
-      "days_until": 12
+      "days_until": 11
     },
     {
       "name": "民生银行|",
       "amount": 24305.66,
       "due_date": "2026-10-17",
-      "days_until": 14
+      "days_until": 13
     },
     {
       "name": "工商银行|",
       "amount": 37201.31,
       "due_date": "2026-10-19",
-      "days_until": 16
+      "days_until": 15
     }
   ],
   "urgent": [
     {
-      "name": "兴业银行|",
-      "amount": 19427.61,
-      "due_date": "2026-09-30",
-      "days_until": -3
-    },
-    {
       "name": "光大银行|",
       "amount": 16602.57,
       "due_date": "2026-10-01",
-      "days_until": -2
+      "days_until": -3
     },
     {
       "name": "平安银行|",
       "amount": 6989.78,
       "due_date": "2026-10-01",
-      "days_until": -2
+      "days_until": -3
     },
     {
       "name": "广发银行|",
       "amount": 48611.36,
       "due_date": "2026-10-06",
-      "days_until": 3
+      "days_until": 2
     },
     {
       "name": "招商银行|",
       "amount": 21662.510000000002,
       "due_date": "2026-10-06",
+      "days_until": 2
+    },
+    {
+      "name": "邮储银行|",
+      "amount": 2269.63,
+      "due_date": "2026-10-07",
       "days_until": 3
     }
   ]
