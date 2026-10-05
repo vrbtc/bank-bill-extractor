@@ -1,6 +1,25 @@
 {
-  "generated_at": "2026-10-04 06:28:12",
+  "generated_at": "2026-10-05 06:21:26",
   "bills": [
+    {
+      "subject": "浦发银行-信用卡电子账单",
+      "date": "Mon, 5 Oct 2026 11:31:36 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 22934.88,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026/10/22"
+      ],
+      "statement_dates": [],
+      "statement_day": null,
+      "credit_limit": null,
+      "bank_name": "浦发银行",
+      "source_label": "",
+      "source_email": "rrking@aliyun.com"
+    },
     {
       "subject": "【广发卡 10月还款提醒】",
       "date": "Sat, 03 Oct 2026 08:47:00 +0800",
@@ -308,25 +327,6 @@
       "credit_limit": 50000.0,
       "bank_name": "邮储银行",
       "last4": "6983",
-      "source_label": "",
-      "source_email": "rrking@aliyun.com"
-    },
-    {
-      "subject": "浦发银行-信用卡电子账单",
-      "date": "Sat, 5 Sep 2026 12:59:58 +0800 (CST)",
-      "amounts": [
-        {
-          "value": 1154.35,
-          "currency": "CNY"
-        }
-      ],
-      "due_dates": [
-        "2026/09/22"
-      ],
-      "statement_dates": [],
-      "statement_day": null,
-      "credit_limit": null,
-      "bank_name": "浦发银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     }
