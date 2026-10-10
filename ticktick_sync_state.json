@@ -1,5 +1,5 @@
 {
-  "last_sync": "2026-10-10 09:44:24",
+  "last_sync": "2026-10-10 18:22:22",
   "created_count": 0,
   "skipped_count": 0,
   "created_tasks": [],
@@ -16,7 +16,7 @@
           "subject": "中国建设银行信用卡电子账单",
           "amount": 61955.74,
           "due_date": "2026-10-15",
-          "days_until": 5
+          "days_until": 4
         }
       ]
     },
@@ -32,7 +32,7 @@
           "subject": "交通银行白金信用卡2026年09月电子账单",
           "amount": 5541.79,
           "due_date": "2026-10-15",
-          "days_until": 5
+          "days_until": 4
         }
       ]
     },
@@ -48,7 +48,7 @@
           "subject": "长安银行信用卡电子账单",
           "amount": 4852.0,
           "due_date": "2026-10-15",
-          "days_until": 5
+          "days_until": 4
         }
       ]
     },
@@ -64,7 +64,7 @@
           "subject": "民生信用卡2026年09月电子对账单",
           "amount": 24305.66,
           "due_date": "2026-10-17",
-          "days_until": 7
+          "days_until": 6
         }
       ]
     },
@@ -80,7 +80,7 @@
           "subject": "中国工商银行客户对账单(ICBC Peony Card Bank Statement)",
           "amount": 37201.31,
           "due_date": "2026-10-19",
-          "days_until": 9
+          "days_until": 8
         }
       ]
     },
@@ -96,7 +96,7 @@
           "subject": "浦发银行-信用卡电子账单",
           "amount": 22934.88,
           "due_date": "2026-10-22",
-          "days_until": 12
+          "days_until": 11
         }
       ]
     },
@@ -112,7 +112,7 @@
           "subject": "邮储银行信用卡电子账单",
           "amount": 10678.59,
           "due_date": "2026-10-27",
-          "days_until": 17
+          "days_until": 16
         }
       ]
     }
