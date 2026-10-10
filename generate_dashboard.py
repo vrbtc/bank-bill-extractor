@@ -352,10 +352,10 @@ def push_to_feishu():
 
     print('\n--- Feishu Push (代办提醒) ---')
 
-    # 时段守卫：北京 07:00-22:30 之外只同步不推送（凌晨运行避免打扰）
+    # 时段守卫：北京 09:00-22:30 之外只同步不推送（凌晨/清晨运行免打扰）
     now_bj = datetime.now(BJ_TZ)
-    if not (7 <= now_bj.hour < 22 or (now_bj.hour == 22 and now_bj.minute <= 30)):
-        print(f"  跳过推送：北京时间 {now_bj.strftime('%H:%M')} 在 07:00-22:30 之外")
+    if not (9 <= now_bj.hour < 22 or (now_bj.hour == 22 and now_bj.minute <= 30)):
+        print(f"  跳过推送：北京时间 {now_bj.strftime('%H:%M')} 在 09:00-22:30 之外")
         print('--- Feishu Push Done ---\n')
         return
 

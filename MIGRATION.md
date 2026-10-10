@@ -53,7 +53,7 @@
    - [ ] Actions 4 次 schedule 正常跑（转私有不影响 Actions）
    - [ ] 状态文件 commit 回推正常（`chore: append run log [skip ci]`）
    - [ ] 新仪表盘 URL 可访问（Cloudflare Pages `*.pages.dev`）
-   - [ ] 飞书推送正常（时段守卫 07:00-22:30）
+   - [ ] 飞书推送正常（时段守卫 09:00-22:30）
    - [ ] TickTick 任务无重复创建
 
 ## 三、Actions Secrets 迁移清单（速查）
