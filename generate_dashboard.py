@@ -282,33 +282,12 @@ def sync_to_ticktick(bills):
     print('\n--- TickTick Sync ---')
     sync = TickTickSync(api_key=api_key)
 
-    # 云端 runner 没有本地 ticktick_completed_titles.json，
-    # 无法感知用户在滴答清单里手动完成的任务，若对逾期账单也同步会重建已完成的任务。
-    # 所以云端只处理「未来账单」（days_until >= 0），逾期账单交给本地 daily_run.py 处理。
-    today_bj = datetime.now(BJ_TZ).date()
-    future_bills = []
-    skipped_overdue = 0
-    for bill in bills:
-        bank = bill.get('bank_name', '')
-        has_future = False
-        for dd in bill.get('due_dates', []):
-            try:
-                d = datetime.strptime(str(dd).replace('/', '-'), '%Y-%m-%d').date()
-                if (d - today_bj).days >= 0:
-                    has_future = True
-                    break
-            except Exception:
-                pass
-        if has_future:
-            future_bills.append(bill)
-        else:
-            skipped_overdue += 1
-    if skipped_overdue:
-        print(f"  Skipped {skipped_overdue} overdue bills (云端不处理逾期账单，交给本地 daily_run.py)")
-
+    # 云端为主架构：全量同步（含逾期账单），与本地 daily_run.py 一致。
+    # 已还款账单由 ticktick_completed_amounts.json 精确剔除（银行+邮箱+子账户+金额+还款日），
+    # 该状态文件已随 repo 持久化，云端每次运行后 commit 回 main，形成状态闭环。
     bills_data = {
         'generated_at': datetime.now(BJ_TZ).strftime('%Y-%m-%d %H:%M:%S'),
-        'bills': future_bills
+        'bills': bills
     }
 
     # Clean up old tasks first
@@ -372,12 +351,20 @@ def push_to_feishu():
         return
 
     print('\n--- Feishu Push (代办提醒) ---')
+
+    # 时段守卫：北京 07:00-22:30 之外只同步不推送（凌晨运行避免打扰）
+    now_bj = datetime.now(BJ_TZ)
+    if not (7 <= now_bj.hour < 22 or (now_bj.hour == 22 and now_bj.minute <= 30)):
+        print(f"  跳过推送：北京时间 {now_bj.strftime('%H:%M')} 在 07:00-22:30 之外")
+        print('--- Feishu Push Done ---\n')
+        return
+
     notifier = FeishuNotifier(webhook_url=webhook_url)
 
     # 按北京时间小时区分推送范围：
     #   上午运行（hour < 14，对应 11:00 cron）→ 推送未来 4 天待办（含今天+明天+后天+大后天）
     #   下午运行（hour >= 14，对应 17:00 cron）→ 只推送今日到期 + 逾期（紧急提醒）
-    now_bj_hour = datetime.now(BJ_TZ).hour
+    now_bj_hour = now_bj.hour
     if now_bj_hour < 14:
         days = 4
         print(f"  模式：上午（北京 {now_bj_hour} 时）→ 推送未来 4 天待办")

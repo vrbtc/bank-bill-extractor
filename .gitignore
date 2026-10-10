@@ -105,10 +105,11 @@ _delete*.py
 # Local deployment working dirs
 gh-pages/
 
-# Screenshots and state files
+# Screenshots
 *.png
-ticktick_sync_state.json
-ticktick_completed_titles.json
+# 注：ticktick_sync_state.json / ticktick_completed_titles.json /
+#     ticktick_completed_amounts.json 为云端主架构状态文件，随 repo 持久化
+#     （云端每次运行后 commit 回 main，形成完成检测闭环），不再忽略
 
 # Windows task scheduler exports
 BankBillDaily_task.xml

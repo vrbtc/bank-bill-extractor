@@ -1,0 +1,120 @@
+{
+  "last_sync": "2026-10-10 17:00:17",
+  "created_count": 0,
+  "skipped_count": 0,
+  "created_tasks": [],
+  "last_seen_titles": {
+    "💳 建行 61955.74 元": {
+      "bank_name": "建设银行",
+      "abbr": "建行",
+      "label": "",
+      "sub_account": "",
+      "total_amount": 61955.74,
+      "due_date": "2026-10-15",
+      "details": [
+        {
+          "subject": "中国建设银行信用卡电子账单",
+          "amount": 61955.74,
+          "due_date": "2026-10-15",
+          "days_until": 5
+        }
+      ]
+    },
+    "💳 交行 5541.79 元": {
+      "bank_name": "交通银行",
+      "abbr": "交行",
+      "label": "",
+      "sub_account": "",
+      "total_amount": 5541.79,
+      "due_date": "2026-10-15",
+      "details": [
+        {
+          "subject": "交通银行白金信用卡2026年09月电子账单",
+          "amount": 5541.79,
+          "due_date": "2026-10-15",
+          "days_until": 5
+        }
+      ]
+    },
+    "💳 长安 4852.00 元 (YY)": {
+      "bank_name": "长安银行",
+      "abbr": "长安",
+      "label": "YY",
+      "sub_account": "",
+      "total_amount": 4852.0,
+      "due_date": "2026-10-15",
+      "details": [
+        {
+          "subject": "长安银行信用卡电子账单",
+          "amount": 4852.0,
+          "due_date": "2026-10-15",
+          "days_until": 5
+        }
+      ]
+    },
+    "💳 民生 24305.66 元": {
+      "bank_name": "民生银行",
+      "abbr": "民生",
+      "label": "",
+      "sub_account": "",
+      "total_amount": 24305.66,
+      "due_date": "2026-10-17",
+      "details": [
+        {
+          "subject": "民生信用卡2026年09月电子对账单",
+          "amount": 24305.66,
+          "due_date": "2026-10-17",
+          "days_until": 7
+        }
+      ]
+    },
+    "💳 工行 37201.31 元": {
+      "bank_name": "工商银行",
+      "abbr": "工行",
+      "label": "",
+      "sub_account": "",
+      "total_amount": 37201.31,
+      "due_date": "2026-10-19",
+      "details": [
+        {
+          "subject": "中国工商银行客户对账单(ICBC Peony Card Bank Statement)",
+          "amount": 37201.31,
+          "due_date": "2026-10-19",
+          "days_until": 9
+        }
+      ]
+    },
+    "💳 浦发 22934.88 元": {
+      "bank_name": "浦发银行",
+      "abbr": "浦发",
+      "label": "",
+      "sub_account": "",
+      "total_amount": 22934.88,
+      "due_date": "2026-10-22",
+      "details": [
+        {
+          "subject": "浦发银行-信用卡电子账单",
+          "amount": 22934.88,
+          "due_date": "2026-10-22",
+          "days_until": 12
+        }
+      ]
+    },
+    "💳 邮储 10678.59 元": {
+      "bank_name": "邮储银行",
+      "abbr": "邮储",
+      "label": "",
+      "sub_account": "",
+      "total_amount": 10678.59,
+      "due_date": "2026-10-27",
+      "details": [
+        {
+          "subject": "邮储银行信用卡电子账单",
+          "amount": 10678.59,
+          "due_date": "2026-10-27",
+          "days_until": 17
+        }
+      ]
+    }
+  }
+}
