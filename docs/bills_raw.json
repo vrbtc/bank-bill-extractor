@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-09 06:52:36",
+  "generated_at": "2026-10-10 06:29:26",
   "bills": [
     {
       "subject": "邮储银行信用卡电子账单",
@@ -161,7 +161,7 @@
       "statement_day": null,
       "credit_limit": 58000.0,
       "bank_name": "交通银行",
-      "last4": "8424",
+      "last4": "1338",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     },
