@@ -72,6 +72,8 @@ jobs:
             exit 0
           fi
           git commit -m "chore: append run log [skip ci]"
+          # generate_dashboard 生成的 gh-pages/ 是未暂存变更，rebase 前自动 stash
+          git config rebase.autoStash true
           git pull --rebase origin main || { echo "pull --rebase failed, keep local run log only"; exit 0; }
           git push || { echo "push failed (conflict with local auto-sync), local side will sync it"; exit 0; }
 

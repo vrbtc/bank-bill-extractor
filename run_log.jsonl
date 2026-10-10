@@ -17,3 +17,12 @@
 {"ts": "2026-10-10 16:45:30", "event": "create_task", "source": "local", "bank": "浦发银行", "title": "💳 浦发 22934.88 元", "amount": 22934.88, "due_date": "2026-10-22", "task_id": "6ac9fb29e4b090d77341a0ec"}
 {"ts": "2026-10-10 16:45:30", "event": "update_task", "source": "local", "bank": "邮储银行", "title": "💳 邮储 10678.59 元", "due_date": "2026-10-27", "task_id": "6ab99e97e4b043247852b10e"}
 {"ts": "2026-10-10 16:45:30", "event": "sync_summary", "source": "local", "created": 1, "updated": 6, "skipped": 0, "skipped_completed": 0, "errors": 0, "legacy_cleaned": 0, "created_titles": ["💳 浦发 22934.88 元"], "updated_titles": ["💳 建行 61955.74 元", "💳 交行 5541.79 元", "💳 长安 4852.00 元 (YY)", "💳 民生 24305.66 元", "💳 工行 37201.31 元", "💳 邮储 10678.59 元"]}
+{"ts": "2026-10-10 16:51:16", "event": "update_task", "source": "local", "bank": "建设银行", "title": "💳 建行 61955.74 元", "due_date": "2026-10-15", "task_id": "6ab92ea7e4b01410d4a0dc7b"}
+{"ts": "2026-10-10 16:51:16", "event": "update_task", "source": "local", "bank": "交通银行", "title": "💳 交行 5541.79 元", "due_date": "2026-10-15", "task_id": "6ab22901e4b080b6ef49c91c"}
+{"ts": "2026-10-10 16:51:16", "event": "update_task", "source": "local", "bank": "长安银行", "title": "💳 长安 4852.00 元 (YY)", "due_date": "2026-10-15", "task_id": "6ab0dc8de4b087a2ab9475c8"}
+{"ts": "2026-10-10 16:51:16", "event": "update_task", "source": "local", "bank": "民生银行", "title": "💳 民生 24305.66 元", "due_date": "2026-10-17", "task_id": "6aba1f0ae4b02ef0dc264ce4"}
+{"ts": "2026-10-10 16:51:16", "event": "update_task", "source": "local", "bank": "工商银行", "title": "💳 工行 37201.31 元", "due_date": "2026-10-19", "task_id": "6abf61a6e4b0666b398e67c6"}
+{"ts": "2026-10-10 16:51:16", "event": "update_task", "source": "local", "bank": "浦发银行", "title": "💳 浦发 22934.88 元", "due_date": "2026-10-22", "task_id": "6ac9fb29e4b090d77341a0ec"}
+{"ts": "2026-10-10 16:51:16", "event": "update_task", "source": "local", "bank": "邮储银行", "title": "💳 邮储 10678.59 元", "due_date": "2026-10-27", "task_id": "6ab99e97e4b043247852b10e"}
+{"ts": "2026-10-10 16:51:16", "event": "sync_summary", "source": "local", "created": 0, "updated": 7, "skipped": 0, "skipped_completed": 0, "errors": 0, "legacy_cleaned": 0, "created_titles": [], "updated_titles": ["💳 建行 61955.74 元", "💳 交行 5541.79 元", "💳 长安 4852.00 元 (YY)", "💳 民生 24305.66 元", "💳 工行 37201.31 元", "💳 浦发 22934.88 元", "💳 邮储 10678.59 元"]}
+{"ts": "2026-10-10 16:51:18", "event": "run_summary", "source": "local", "runner": "daily_run", "bills": 27, "upcoming_total": 170029.16999999998, "sync_created": 0, "sync_updated": 7}
