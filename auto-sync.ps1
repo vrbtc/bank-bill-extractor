@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     通用项目自动同步到 GitHub 脚本（零依赖、可移植）
 .PARAMETER ProjectPath

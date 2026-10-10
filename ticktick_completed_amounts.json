@@ -1,0 +1,347 @@
+{
+  "completed_amounts": [
+    {
+      "bank": "光大",
+      "label": "",
+      "sub_account": "",
+      "amount": 7654.09,
+      "due_date": null,
+      "title": "💳 光大 7654.09 元",
+      "completed_at": "2026-08-17 12:35:47"
+    },
+    {
+      "bank": "民生",
+      "label": "",
+      "sub_account": "",
+      "amount": 188.5,
+      "due_date": null,
+      "title": "💳 民生 188.50 元",
+      "completed_at": "2026-08-17 12:35:47"
+    },
+    {
+      "bank": "广发",
+      "label": "",
+      "sub_account": "",
+      "amount": 1544.05,
+      "due_date": null,
+      "title": "💳 广发 1544.05 元",
+      "completed_at": "2026-08-17 12:35:47"
+    },
+    {
+      "bank": "交行",
+      "label": "",
+      "sub_account": "",
+      "amount": 32950.34,
+      "due_date": null,
+      "title": "💳 交行 32950.34 元",
+      "completed_at": "2026-08-17 12:35:47"
+    },
+    {
+      "bank": "工行",
+      "label": "",
+      "sub_account": "",
+      "amount": 22212.13,
+      "due_date": null,
+      "title": "💳 工行 22212.13 元",
+      "completed_at": "2026-08-17 12:35:47"
+    },
+    {
+      "bank": "招行",
+      "label": "",
+      "sub_account": "",
+      "amount": 24972.65,
+      "due_date": null,
+      "title": "💳 招行 24972.65 元",
+      "completed_at": "2026-08-17 12:35:47"
+    },
+    {
+      "bank": "广发",
+      "label": "",
+      "sub_account": "",
+      "amount": 21640.51,
+      "due_date": null,
+      "title": "💳 广发 21640.51 元",
+      "completed_at": "2026-08-17 12:35:47"
+    },
+    {
+      "bank": "长安",
+      "label": "YY",
+      "sub_account": "",
+      "amount": 18208.0,
+      "due_date": null,
+      "title": "💳 长安 18208.00 元 (YY)",
+      "completed_at": "2026-08-17 12:35:47"
+    },
+    {
+      "bank": "浦发",
+      "label": "",
+      "sub_account": "",
+      "amount": 3871.95,
+      "due_date": null,
+      "title": "💳 浦发 3871.95 元",
+      "completed_at": "2026-08-17 12:35:47"
+    },
+    {
+      "bank": "邮储",
+      "label": "",
+      "sub_account": "",
+      "amount": 24797.2,
+      "due_date": null,
+      "title": "💳 邮储 24797.20 元",
+      "completed_at": "2026-08-17 12:35:47"
+    },
+    {
+      "bank": "兴业",
+      "label": "",
+      "sub_account": "",
+      "amount": 9204.48,
+      "due_date": null,
+      "title": "💳 兴业 9204.48 元",
+      "completed_at": "2026-08-17 12:35:47"
+    },
+    {
+      "bank": "平安",
+      "label": "",
+      "sub_account": "",
+      "amount": 6613.59,
+      "due_date": null,
+      "title": "💳 平安 6613.59 元",
+      "completed_at": "2026-08-17 12:35:47"
+    },
+    {
+      "bank": "建行",
+      "label": "",
+      "sub_account": "",
+      "amount": 3342.06,
+      "due_date": null,
+      "title": "💳 建行 3342.06 元",
+      "completed_at": "2026-08-17 12:35:47"
+    },
+    {
+      "bank": "浦发",
+      "label": "",
+      "sub_account": "",
+      "amount": 9312.73,
+      "due_date": null,
+      "title": "💳 浦发 9312.73 元",
+      "completed_at": "2026-09-27 22:56:39"
+    },
+    {
+      "bank": "民生",
+      "label": "",
+      "sub_account": "",
+      "amount": 29779.37,
+      "due_date": null,
+      "title": "💳 民生 29779.37 元",
+      "completed_at": "2026-09-27 22:56:39"
+    },
+    {
+      "bank": "兴业",
+      "label": "",
+      "sub_account": "",
+      "amount": 54342.68,
+      "due_date": null,
+      "title": "💳 兴业 54342.68 元",
+      "completed_at": "2026-09-27 22:56:39"
+    },
+    {
+      "bank": "兴业",
+      "label": "YY",
+      "sub_account": "",
+      "amount": 92.28,
+      "due_date": "2026-08-31",
+      "title": "💳 兴业 92.28 元 (YY)",
+      "completed_at": "2026-09-27 22:56:39"
+    },
+    {
+      "bank": "光大",
+      "label": "",
+      "sub_account": "",
+      "amount": 57482.0,
+      "due_date": null,
+      "title": "💳 光大 57482.00 元",
+      "completed_at": "2026-09-27 22:56:39"
+    },
+    {
+      "bank": "平安",
+      "label": "",
+      "sub_account": "",
+      "amount": 4015.43,
+      "due_date": null,
+      "title": "💳 平安 4015.43 元",
+      "completed_at": "2026-09-27 22:56:39"
+    },
+    {
+      "bank": "工行",
+      "label": "",
+      "sub_account": "",
+      "amount": 9644.38,
+      "due_date": null,
+      "title": "💳 工行 9644.38 元",
+      "completed_at": "2026-09-27 22:56:39"
+    },
+    {
+      "bank": "长安",
+      "label": "YY",
+      "sub_account": "",
+      "amount": 9104.0,
+      "due_date": "2026-08-15",
+      "title": "💳 长安 9104.00 元 (YY)",
+      "completed_at": "2026-09-27 22:56:39"
+    },
+    {
+      "bank": "邮储",
+      "label": "",
+      "sub_account": "",
+      "amount": 18918.38,
+      "due_date": null,
+      "title": "💳 邮储 18918.38 元",
+      "completed_at": "2026-09-27 22:56:39"
+    },
+    {
+      "bank": "招行",
+      "label": "",
+      "sub_account": "",
+      "amount": 2833.33,
+      "due_date": "2026-09-28",
+      "title": "💳 招行 2833.33 元",
+      "completed_at": "2026-09-27 22:56:39"
+    },
+    {
+      "bank": "建行",
+      "label": "",
+      "sub_account": "",
+      "amount": 6782.23,
+      "due_date": null,
+      "title": "💳 建行 6782.23 元",
+      "completed_at": "2026-09-27 22:56:39"
+    },
+    {
+      "bank": "邮储",
+      "label": "",
+      "sub_account": "",
+      "amount": 38266.31,
+      "due_date": "2026-09-27",
+      "title": "💳 邮储 40535.94 元",
+      "completed_at": "2026-10-03 21:08:54"
+    },
+    {
+      "bank": "兴业",
+      "label": "YY",
+      "sub_account": "",
+      "amount": 71.62,
+      "due_date": "2026-10-01",
+      "title": "💳 兴业 71.62 元 (YY)",
+      "completed_at": "2026-10-03 21:08:54"
+    },
+    {
+      "bank": "光大",
+      "label": "",
+      "sub_account": "",
+      "amount": 16602.57,
+      "due_date": "2026-10-01",
+      "title": "💳 光大 16602.57 元",
+      "completed_at": "2026-10-03 21:08:54"
+    },
+    {
+      "bank": "兴业",
+      "label": "",
+      "sub_account": "",
+      "amount": 19427.61,
+      "due_date": "2026-09-30",
+      "title": "💳 兴业 19427.61 元",
+      "completed_at": "2026-10-03 21:08:54"
+    },
+    {
+      "bank": "平安",
+      "label": "",
+      "sub_account": "",
+      "amount": 6989.78,
+      "due_date": "2026-10-01",
+      "title": "💳 平安 6989.78 元",
+      "completed_at": "2026-10-03 21:08:54"
+    },
+    {
+      "bank": "招行",
+      "label": "",
+      "sub_account": "车贷",
+      "amount": 2833.33,
+      "due_date": "2026-09-28",
+      "title": "💳 招行车贷 2833.33 元",
+      "completed_at": "2026-10-03 21:08:54"
+    },
+    {
+      "bank": "招行",
+      "label": "",
+      "sub_account": "",
+      "amount": 18875.25,
+      "due_date": "2026-10-06",
+      "title": "💳 招行 21662.51 元",
+      "completed_at": "2026-10-10 16:20:11"
+    },
+    {
+      "bank": "招行",
+      "label": "",
+      "sub_account": "分期卡",
+      "amount": 2787.26,
+      "due_date": "2026-10-06",
+      "title": "💳 招行 21662.51 元",
+      "completed_at": "2026-10-10 16:20:11"
+    },
+    {
+      "bank": "广发",
+      "label": "",
+      "sub_account": "",
+      "amount": 48611.36,
+      "due_date": "2026-10-06",
+      "title": "💳 广发 48611.36 元",
+      "completed_at": "2026-10-10 16:30:56"
+    },
+    {
+      "bank": "邮储",
+      "label": "",
+      "sub_account": "",
+      "amount": 2269.63,
+      "due_date": "2026-10-07",
+      "title": "💳 邮储 2269.63 元",
+      "completed_at": "2026-10-10 16:30:56"
+    },
+    {
+      "bank": "平安",
+      "label": "YY",
+      "sub_account": "",
+      "amount": 289.57,
+      "due_date": "2026-10-07",
+      "title": "💳 平安 289.57 元 (YY)",
+      "completed_at": "2026-10-10 16:30:56"
+    },
+    {
+      "bank": "招行",
+      "label": "",
+      "sub_account": "",
+      "amount": 2787.26,
+      "due_date": "2026-10-06",
+      "title": "💳 招行 21662.51 元",
+      "completed_at": "2026-10-10 16:38:42"
+    },
+    {
+      "bank": "平安",
+      "label": "YY",
+      "sub_account": "",
+      "amount": 156.24,
+      "due_date": "2026-09-07",
+      "title": "💳 平安 156.24 元 (YY)",
+      "completed_at": "2026-10-10 16:43:35"
+    },
+    {
+      "bank": "浦发",
+      "label": "",
+      "sub_account": "",
+      "amount": 1154.35,
+      "due_date": "2026-09-22",
+      "title": "💳 浦发 1154.35 元",
+      "completed_at": "2026-10-10 16:43:35"
+    }
+  ],
+  "last_updated": "2026-10-10 16:45:29"
+}

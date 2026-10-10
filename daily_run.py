@@ -39,6 +39,12 @@ def run():
 
     sys.path.insert(0, str(SCRIPT_DIR))
 
+    # 供结束时写 run_summary 日志（留存到 GitHub）
+    bills_count = 0
+    upcoming_total = 0.0
+    sync_created = None
+    sync_updated = None
+
     # Step 1: 刷新账单
     log("Step 1: 从邮箱获取最新账单...")
     try:
@@ -66,6 +72,8 @@ def run():
             json.dump(data_to_save, f, ensure_ascii=False, indent=2)
 
         log(f"OK: 获取 {len(bills)} 封账单，待还总额 ¥{total_amount:,.2f}")
+        bills_count = len(bills)
+        upcoming_total = total_amount
     except Exception as e:
         log(f"ERROR: 刷新账单失败 - {e}")
         traceback.print_exc()
@@ -103,7 +111,9 @@ def run():
         # 同步新账单
         result = sync.sync_bills(data_to_save)
         if result["success"]:
-            log(f"  OK: 创建 {result['total_created']} 个, 跳过 {result['total_skipped']} 个")
+            sync_created = result.get("total_created", 0)
+            sync_updated = result.get("total_updated", 0)
+            log(f"  OK: 创建 {result['total_created']} 个, 跳过 {result['total_skipped']} 个, 更新 {result.get('total_updated', 0)} 个")
             for c in result.get("created", []):
                 if "error" not in c:
                     log(f"    + {c['title']}")
@@ -137,6 +147,15 @@ def run():
 
     log("每日账单自动查询 + 滴答清单同步 完成")
     log("=" * 60)
+
+    # 运行摘要留存到 run_log.jsonl（由 auto-sync 自动推送 GitHub）
+    try:
+        from run_logger import log_event
+        log_event("run_summary", runner="daily_run",
+                  bills=bills_count, upcoming_total=upcoming_total,
+                  sync_created=sync_created, sync_updated=sync_updated)
+    except Exception:
+        pass
     return True
 
 

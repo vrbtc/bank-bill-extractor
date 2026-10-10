@@ -82,8 +82,10 @@ def generate_dashboard():
             days = info['earliest_due_date']['days_until']
             bank_name = info.get('bank_name', bank_key.split('|')[0] if '|' in bank_key else bank_key)
             source_label = info.get('source_label', '')
-            # YY 后缀：QQ 邮箱的账单在银行名后追加 (YY) 标识
-            display_name = f"{bank_name} ({source_label})" if source_label else bank_name
+            sub_account = info.get('sub_account', '')
+            # 子账户标识（如招行车贷）拼在银行名后；YY 后缀：QQ 邮箱的账单追加 (YY) 标识
+            base_name = f"{bank_name}({sub_account})" if sub_account else bank_name
+            display_name = f"{base_name} ({source_label})" if source_label else base_name
             urgent_bills.append({
                 'bank': display_name,
                 'amount': info['total_amount'],
@@ -124,7 +126,9 @@ def generate_dashboard():
         if info['total_amount'] > 0 and info['earliest_due_date']:
             bank_name = info.get('bank_name', bank_key.split('|')[0] if '|' in bank_key else bank_key)
             source_label = info.get('source_label', '')
-            display_name = f"{bank_name} ({source_label})" if source_label else bank_name
+            sub_account = info.get('sub_account', '')
+            base_name = f"{bank_name}({sub_account})" if sub_account else bank_name
+            display_name = f"{base_name} ({source_label})" if source_label else base_name
             extra = extra_by_key.get(bank_key) or extra_by_key.get(f"{bank_name}|{source_label}") or {}
             due = info['earliest_due_date']['date']
             due_day = None
@@ -180,6 +184,15 @@ def generate_dashboard():
     print(f"Dashboard generated at {output_dir}")
     print(f"Total upcoming (all): {total_all:,.2f}")
     print(f"Total upcoming (15 days): {total_15:,.2f}")
+
+    # 运行日志留存（本地由 auto-sync 推送 GitHub；云端由 deploy.yml 推回 main）
+    try:
+        from run_logger import log_event
+        log_event("dashboard", runner="generate_dashboard",
+                  bills=len(bills), total_all=total_all,
+                  total_15=total_15, banks_all=banks_count_all)
+    except Exception:
+        pass
     return True
 
 
@@ -232,9 +245,9 @@ def _filter_completed_banks(upcoming_dict, active_titles):
             continue
         bank_name = info.get('bank_name', bank_key.split('|')[0] if '|' in bank_key else bank_key)
         source_label = info.get('source_label', '')
-        abbr = TickTickSync._bank_abbr(bank_name)
-        label_suffix = TickTickSync._label_suffix(source_label)
-        title = f"💳 {abbr} {total:.2f} 元{label_suffix}"
+        sub_account = info.get('sub_account', '')
+        # 与 ticktick_sync._build_task 的标题构造保持一致（含子账户如"招行车贷"）
+        title = TickTickSync._task_title(bank_name, total, source_label=source_label, sub_account=sub_account)
         if title not in active_titles:
             to_remove.append(bank_key)
     for bank_key in to_remove:

@@ -1156,3 +1156,27 @@ class BankExtractorFactory:
             return self.extractors[bank_name]
         else:
             return OtherBankExtractor(bank_name)
+
+
+def get_sub_account(bank_name, subject):
+    """识别银行子账户类型（还款日不同的独立账户，聚合时需分开）。
+
+    招商银行「信用卡中心消费信贷账单」= 汽车分期（车贷），
+    还款日固定在每月 28 日，与信用卡/分期卡（每月 6 日）不同，
+    合并聚合会导致提醒金额和日期错误。
+
+    招商银行「分期信用卡电子账单」= 分期卡，与个人消费信用卡
+    还款日虽同为每月 6 日，但属于不同账户，须分别建任务，
+    防止其中一笔还清勾选任务时连带把另一笔标记为已还
+    （2026-10 招行分期卡逾期事故的根因之一）。
+
+    Returns:
+        str: 子账户标识（如 '车贷'、'分期卡'），无则返回 ''
+    """
+    if not bank_name or '招商' not in bank_name or not subject:
+        return ''
+    if '消费信贷' in subject:
+        return '车贷'
+    if '分期信用卡' in subject:
+        return '分期卡'
+    return ''

@@ -28,6 +28,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # 完整历史：Commit run log 步骤需要 rebase + push 回 main
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -55,6 +58,22 @@ jobs:
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
         run: |
           python generate_dashboard.py
+
+      # 运行日志留存：把本次云端运行的 run_log.jsonl 推回 main 分支
+      # commit message 带 [skip ci]，避免 push 事件再次触发本 workflow
+      - name: Commit run log
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add run_log.jsonl || true
+          if git diff --cached --quiet; then
+            echo "run log unchanged, skip commit"
+            exit 0
+          fi
+          git commit -m "chore: append run log [skip ci]"
+          git pull --rebase origin main || { echo "pull --rebase failed, keep local run log only"; exit 0; }
+          git push || { echo "push failed (conflict with local auto-sync), local side will sync it"; exit 0; }
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

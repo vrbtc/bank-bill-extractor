@@ -15,7 +15,7 @@ from collections import defaultdict
 
 from email_client import EmailClient
 from email_decoder import EmailDecoder
-from bank_extractors import BankExtractorFactory
+from bank_extractors import BankExtractorFactory, get_sub_account
 
 
 # 支持多邮箱配置：优先使用 get_all_emails()，单邮箱配置仍向后兼容
@@ -270,6 +270,8 @@ def get_upcoming_bills(bills, days=None, include_overdue_days=3):
     include_overdue_days: 包含已过期 N 天内的账单（默认 3 天，避免当天/时区边界漏单）
 
     多邮箱模式：同银行不同 source_label 分别聚合（key = bank_name|label）
+    按还款日分组：同银行不同还款日的账单分开聚合（key 追加 |due_date，
+    与 ticktick_sync 的分组保持一致），避免合并成错误总额+还款日错乱
     """
     # 使用北京时间的「日期」做比较，与仪表盘时区一致
     try:
@@ -282,7 +284,8 @@ def get_upcoming_bills(bills, days=None, include_overdue_days=3):
         'total_amount': 0,
         'amounts': [],
         'earliest_due_date': None,
-        'source_label': ''
+        'source_label': '',
+        'sub_account': ''
     })
 
     for bill in bills:
@@ -291,11 +294,9 @@ def get_upcoming_bills(bills, days=None, include_overdue_days=3):
             continue
 
         source_label = bill.get('source_label', '')
-        # 多邮箱模式：同银行不同 source_label 分别聚合
-        bank_key = f"{bank_name}|{source_label}"
-        bank_info = bank_bills[bank_key]
-        bank_info['bank_name'] = bank_name
-        bank_info['source_label'] = source_label
+        # 子账户拆分：同银行还款日不同的账户（如招行车贷 28 日 vs 信用卡 6 日）分开聚合，
+        # 避免合并成一个错误的金额+还款日
+        sub_account = get_sub_account(bank_name, bill.get('subject', ''))
 
         best_due_date = None
         best_days_until = None
@@ -322,8 +323,18 @@ def get_upcoming_bills(bills, days=None, include_overdue_days=3):
                         best_due_date = due_date_str
 
         if best_due_date and best_days_until is not None:
+            # 按还款日分组：同银行不同还款日的账单分开（如邮储两张卡 09-27 与 10-07、
+            # 工行旧账单 09-19 与新账单 10-19）；招行分期卡已按子账户单独拆分，
+            # 即使与信用卡同在 6 日还款也不合并，与 ticktick_sync 分组一致
+            bank_key = (f"{bank_name}|{sub_account}|{source_label}|{best_due_date}"
+                        if sub_account else f"{bank_name}|{source_label}|{best_due_date}")
+            bank_info = bank_bills[bank_key]
+            bank_info['bank_name'] = bank_name
+            bank_info['source_label'] = source_label
+            bank_info['sub_account'] = sub_account
+
             for amount_info in bill.get('amounts', []):
-                # 去重：同一银行同一 label 下，金额+还款日完全相同视为重复账单
+                # 去重：同组内金额相同视为重复账单
                 # （常见于原件 + Fw: 转发件内容一致，会导致金额翻倍）
                 is_dup = any(
                     a['value'] == amount_info['value'] and a['due_date'] == best_due_date
@@ -338,13 +349,13 @@ def get_upcoming_bills(bills, days=None, include_overdue_days=3):
                     'email': bill['subject']
                 })
                 bank_info['total_amount'] += amount_info['value']
-            
-            if bank_info['earliest_due_date'] is None or abs(best_days_until) < abs(bank_info['earliest_due_date']['days_until']):
-                bank_info['earliest_due_date'] = {
-                    'date': best_due_date,
-                    'days_until': best_days_until
-                }
-    
+
+            # 组内所有账单还款日相同（按还款日分组），直接取值
+            bank_info['earliest_due_date'] = {
+                'date': best_due_date,
+                'days_until': best_days_until
+            }
+
     return bank_bills
 
 

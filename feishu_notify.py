@@ -177,12 +177,18 @@ class FeishuNotifier:
 
         all_upcoming = get_upcoming_bills(raw_bills, days=None)
         result = []
-        for bank_name, info in sorted(all_upcoming.items(),
+        for bank_key, info in sorted(all_upcoming.items(),
                                        key=lambda x: x[1].get('earliest_due_date', {}).get('days_until', 999)
                                                        if x[1].get('earliest_due_date') else 999):
             if info['total_amount'] > 0 and info.get('earliest_due_date'):
+                # key 含子账户/label/还款日等多层维度，展示名从 info 字段构造
+                bank = info.get('bank_name', bank_key.split('|')[0])
+                sub = info.get('sub_account', '')
+                label = info.get('source_label', '')
+                base = f"{bank}({sub})" if sub else bank
+                display = f"{base} ({label})" if label else base
                 result.append({
-                    'bank': bank_name,
+                    'bank': display,
                     'amount': info['total_amount'],
                     'due_date': info['earliest_due_date']['date'],
                     'days_until': info['earliest_due_date']['days_until'],
