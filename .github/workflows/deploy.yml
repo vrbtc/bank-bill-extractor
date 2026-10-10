@@ -2,10 +2,15 @@ name: Deploy Bank Bill Dashboard
 
 on:
   schedule:
+    # 云端为主架构：每天 4 次全量同步（含逾期账单）。
     # GitHub Actions cron 延迟严重（观察稳定在 3-5 小时），故提前 5 小时设置，
-    # 让实际推送时间接近北京 11:00 和 17:00
-    - cron: '0 20 * * *'  # UTC 20:00 = 前一天北京 04:00（实际约 09:00-11:00 推送）
-    - cron: '0 2 * * *'   # UTC 02:00 = 北京 10:00（实际约 15:00-17:00 推送）
+    # 让实际运行时间接近北京 11:00 / 17:00 / 22:00 / 04:00
+    # 凌晨档（UTC 14 = 北京 22:00 设置，实际 03:00-05:00 运行）在飞书时段守卫
+    # （07:00-22:30）之外，只同步不推送，不打扰
+    - cron: '0 20 * * *'  # UTC 20:00 = 前一天北京 04:00（实际约 09:00-11:00，上午档推送）
+    - cron: '0 2 * * *'   # UTC 02:00 = 北京 10:00（实际约 15:00-17:00，下午档推送）
+    - cron: '0 8 * * *'   # UTC 08:00 = 北京 16:00（实际约 21:00-23:00，晚间档推送）
+    - cron: '0 14 * * *'  # UTC 14:00 = 北京 22:00（实际约 03:00-05:00，凌晨档只同步）
   push:
     branches: [ main ]
   workflow_dispatch:
@@ -59,14 +64,15 @@ jobs:
         run: |
           python generate_dashboard.py
 
-      # 运行日志留存：把本次云端运行的 run_log.jsonl 推回 main 分支
+      # 云端为主架构：把本次云端运行的运行日志 + 状态文件推回 main 分支，
+      # 形成状态闭环（下次 checkout 拿到最新完成检测基准）。
       # commit message 带 [skip ci]，避免 push 事件再次触发本 workflow
-      - name: Commit run log
+      - name: Commit run log & state files
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add run_log.jsonl || true
+          git add run_log.jsonl ticktick_sync_state.json ticktick_completed_titles.json ticktick_completed_amounts.json || true
           if git diff --cached --quiet; then
             echo "run log unchanged, skip commit"
             exit 0
