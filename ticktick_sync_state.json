@@ -1,14 +1,8 @@
 {
-  "last_sync": "2026-10-12 08:21:22",
-  "created_count": 1,
+  "last_sync": "2026-10-12 17:09:07",
+  "created_count": 0,
   "skipped_count": 0,
-  "created_tasks": [
-    {
-      "bank": "兴业银行",
-      "task_id": "6acc9882e4b076d15d163e8f",
-      "title": "💳 兴业 1.00 元 (YY)"
-    }
-  ],
+  "created_tasks": [],
   "last_seen_titles": {
     "💳 建行 61955.74 元": {
       "bank_name": "建设银行",
@@ -22,7 +16,7 @@
           "subject": "中国建设银行信用卡电子账单",
           "amount": 61955.74,
           "due_date": "2026-10-15",
-          "days_until": 3
+          "days_until": 2
         }
       ]
     },
@@ -38,7 +32,7 @@
           "subject": "交通银行白金信用卡2026年09月电子账单",
           "amount": 5541.79,
           "due_date": "2026-10-15",
-          "days_until": 3
+          "days_until": 2
         }
       ]
     },
@@ -54,7 +48,7 @@
           "subject": "长安银行信用卡电子账单",
           "amount": 4852.0,
           "due_date": "2026-10-15",
-          "days_until": 3
+          "days_until": 2
         }
       ]
     },
@@ -70,7 +64,7 @@
           "subject": "民生信用卡2026年09月电子对账单",
           "amount": 24305.66,
           "due_date": "2026-10-17",
-          "days_until": 5
+          "days_until": 4
         }
       ]
     },
@@ -86,7 +80,7 @@
           "subject": "中国工商银行客户对账单(ICBC Peony Card Bank Statement)",
           "amount": 37201.31,
           "due_date": "2026-10-19",
-          "days_until": 7
+          "days_until": 6
         }
       ]
     },
@@ -102,7 +96,7 @@
           "subject": "浦发银行-信用卡电子账单",
           "amount": 22934.88,
           "due_date": "2026-10-22",
-          "days_until": 10
+          "days_until": 9
         }
       ]
     },
@@ -118,7 +112,7 @@
           "subject": "邮储银行信用卡电子账单",
           "amount": 10678.59,
           "due_date": "2026-10-27",
-          "days_until": 15
+          "days_until": 14
         }
       ]
     },
@@ -134,7 +128,7 @@
           "subject": "兴业银行信用卡2026年10月电子账单",
           "amount": 17523.23,
           "due_date": "2026-10-30",
-          "days_until": 18
+          "days_until": 17
         }
       ]
     },
@@ -150,7 +144,7 @@
           "subject": "兴业银行信用卡2026年10月电子账单",
           "amount": 1.0,
           "due_date": "2026-10-31",
-          "days_until": 19
+          "days_until": 18
         }
       ]
     }
