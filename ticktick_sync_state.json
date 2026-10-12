@@ -1,8 +1,14 @@
 {
-  "last_sync": "2026-10-11 23:31:06",
-  "created_count": 0,
+  "last_sync": "2026-10-12 08:21:22",
+  "created_count": 1,
   "skipped_count": 0,
-  "created_tasks": [],
+  "created_tasks": [
+    {
+      "bank": "兴业银行",
+      "task_id": "6acc9882e4b076d15d163e8f",
+      "title": "💳 兴业 1.00 元 (YY)"
+    }
+  ],
   "last_seen_titles": {
     "💳 建行 61955.74 元": {
       "bank_name": "建设银行",
@@ -129,6 +135,22 @@
           "amount": 17523.23,
           "due_date": "2026-10-30",
           "days_until": 18
+        }
+      ]
+    },
+    "💳 兴业 1.00 元 (YY)": {
+      "bank_name": "兴业银行",
+      "abbr": "兴业",
+      "label": "YY",
+      "sub_account": "",
+      "total_amount": 1.0,
+      "due_date": "2026-10-31",
+      "details": [
+        {
+          "subject": "兴业银行信用卡2026年10月电子账单",
+          "amount": 1.0,
+          "due_date": "2026-10-31",
+          "days_until": 19
         }
       ]
     }
