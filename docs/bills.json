@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-12 06:40:18",
+  "generated_at": "2026-10-13 07:10:43",
   "total_bills": 16,
   "total_amount": 182974.53,
   "bank_count": 8,
@@ -9,49 +9,49 @@
       "name": "建设银行||2026-10-15",
       "amount": 61955.74,
       "due_date": "2026-10-15",
-      "days_until": 3
+      "days_until": 2
     },
     {
       "name": "交通银行||2026-10-15",
       "amount": 5541.79,
       "due_date": "2026-10-15",
-      "days_until": 3
+      "days_until": 2
     },
     {
       "name": "民生银行||2026-10-17",
       "amount": 24305.66,
       "due_date": "2026-10-17",
-      "days_until": 5
+      "days_until": 4
     },
     {
       "name": "工商银行||2026-10-19",
       "amount": 37201.31,
       "due_date": "2026-10-19",
-      "days_until": 7
+      "days_until": 6
     },
     {
       "name": "浦发银行||2026-10-22",
       "amount": 22934.88,
       "due_date": "2026-10-22",
-      "days_until": 10
+      "days_until": 9
     },
     {
       "name": "邮储银行||2026-10-27",
       "amount": 10678.59,
       "due_date": "2026-10-27",
-      "days_until": 15
+      "days_until": 14
     },
     {
       "name": "招商银行|车贷||2026-10-28",
       "amount": 2833.33,
       "due_date": "2026-10-28",
-      "days_until": 16
+      "days_until": 15
     },
     {
       "name": "兴业银行||2026-10-30",
       "amount": 17523.23,
       "due_date": "2026-10-30",
-      "days_until": 18
+      "days_until": 17
     }
   ],
   "urgent": [
@@ -59,13 +59,13 @@
       "name": "建设银行||2026-10-15",
       "amount": 61955.74,
       "due_date": "2026-10-15",
-      "days_until": 3
+      "days_until": 2
     },
     {
       "name": "交通银行||2026-10-15",
       "amount": 5541.79,
       "due_date": "2026-10-15",
-      "days_until": 3
+      "days_until": 2
     }
   ]
 }
