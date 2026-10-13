@@ -1,8 +1,14 @@
 {
-  "last_sync": "2026-10-13 08:46:03",
-  "created_count": 0,
+  "last_sync": "2026-10-13 15:25:18",
+  "created_count": 1,
   "skipped_count": 0,
-  "created_tasks": [],
+  "created_tasks": [
+    {
+      "bank": "光大银行",
+      "task_id": "6ace4d5de4b0f927d505c71c",
+      "title": "💳 光大 34400.25 元"
+    }
+  ],
   "last_seen_titles": {
     "💳 建行 61955.74 元": {
       "bank_name": "建设银行",
@@ -129,6 +135,22 @@
           "amount": 17523.23,
           "due_date": "2026-10-30",
           "days_until": 17
+        }
+      ]
+    },
+    "💳 光大 34400.25 元": {
+      "bank_name": "光大银行",
+      "abbr": "光大",
+      "label": "",
+      "sub_account": "",
+      "total_amount": 34400.25,
+      "due_date": "2026-10-31",
+      "details": [
+        {
+          "subject": "光大信用卡电子账单",
+          "amount": 34400.25,
+          "due_date": "2026-10-31",
+          "days_until": 18
         }
       ]
     },
