@@ -1,6 +1,29 @@
 {
-  "generated_at": "2026-10-13 07:10:43",
+  "generated_at": "2026-10-14 05:33:29",
   "bills": [
+    {
+      "subject": "光大信用卡电子账单",
+      "date": "Tue, 13 Oct 2026 18:30:41 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 34400.25,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-10-31"
+      ],
+      "statement_dates": [
+        "2026-10-12",
+        "2026-09-13"
+      ],
+      "statement_day": null,
+      "credit_limit": 96000.0,
+      "bank_name": "光大银行",
+      "last4": "8685",
+      "source_label": "",
+      "source_email": "rrking@aliyun.com"
+    },
     {
       "subject": "兴业银行信用卡2026年10月电子账单",
       "date": "Sun, 11 Oct 2026 14:30:25 +0800 (CST)",
@@ -202,7 +225,7 @@
       "statement_day": null,
       "credit_limit": 58000.0,
       "bank_name": "交通银行",
-      "last4": "9545",
+      "last4": "3318",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     },
