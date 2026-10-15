@@ -1,8 +1,14 @@
 {
-  "last_sync": "2026-10-15 06:47:44",
-  "created_count": 0,
+  "last_sync": "2026-10-15 12:58:18",
+  "created_count": 1,
   "skipped_count": 0,
-  "created_tasks": [],
+  "created_tasks": [
+    {
+      "bank": "平安银行",
+      "task_id": "6ad0cdeae4b08c16c1275e35",
+      "title": "💳 平安 5093.13 元"
+    }
+  ],
   "last_seen_titles": {
     "💳 建行 61955.74 元": {
       "bank_name": "建设银行",
@@ -129,6 +135,22 @@
           "amount": 1.0,
           "due_date": "2026-10-31",
           "days_until": 16
+        }
+      ]
+    },
+    "💳 平安 5093.13 元": {
+      "bank_name": "平安银行",
+      "abbr": "平安",
+      "label": "",
+      "sub_account": "",
+      "total_amount": 5093.13,
+      "due_date": "2026-11-01",
+      "details": [
+        {
+          "subject": "平安信用卡电子账单",
+          "amount": 5093.13,
+          "due_date": "2026-11-01",
+          "days_until": 17
         }
       ]
     }
