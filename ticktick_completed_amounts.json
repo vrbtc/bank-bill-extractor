@@ -359,7 +359,25 @@
       "due_date": "2026-10-15",
       "title": "💳 长安 4852.00 元 (YY)",
       "completed_at": "2026-10-14 18:25:46"
+    },
+    {
+      "bank": "建行",
+      "label": "",
+      "sub_account": "",
+      "amount": 61955.74,
+      "due_date": "2026-10-15",
+      "title": "💳 建行 61955.74 元",
+      "completed_at": "2026-10-15 22:57:20"
+    },
+    {
+      "bank": "兴业",
+      "label": "YY",
+      "sub_account": "",
+      "amount": 1.0,
+      "due_date": "2026-10-31",
+      "title": "💳 兴业 1.00 元 (YY)",
+      "completed_at": "2026-10-15 22:57:20"
     }
   ],
-  "last_updated": "2026-10-14 18:25:46"
+  "last_updated": "2026-10-15 22:57:20"
 }
