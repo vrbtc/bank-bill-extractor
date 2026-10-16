@@ -1,6 +1,27 @@
 {
-  "generated_at": "2026-10-15 05:21:43",
+  "generated_at": "2026-10-16 05:13:01",
   "bills": [
+    {
+      "subject": "平安信用卡电子账单",
+      "date": "Thu, 15 Oct 2026 20:52:49 +0800 (CST)",
+      "amounts": [
+        {
+          "value": 5093.13,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-11-01"
+      ],
+      "statement_dates": [
+        "2026-10-13"
+      ],
+      "statement_day": null,
+      "credit_limit": 15000.0,
+      "bank_name": "平安银行",
+      "source_label": "",
+      "source_email": "rrking@aliyun.com"
+    },
     {
       "subject": "光大信用卡电子账单",
       "date": "Tue, 13 Oct 2026 18:30:41 +0800 (CST)",
