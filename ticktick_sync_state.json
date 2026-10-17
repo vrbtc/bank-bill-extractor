@@ -1,8 +1,14 @@
 {
-  "last_sync": "2026-10-16 22:40:49",
-  "created_count": 0,
+  "last_sync": "2026-10-17 06:25:35",
+  "created_count": 1,
   "skipped_count": 0,
-  "created_tasks": [],
+  "created_tasks": [
+    {
+      "bank": "邮储银行",
+      "task_id": "6ad314dfe4b0be9ee7f9bdb4",
+      "title": "💳 邮储 2269.58 元"
+    }
+  ],
   "last_seen_titles": {
     "💳 民生 24305.66 元": {
       "bank_name": "民生银行",
@@ -113,6 +119,22 @@
           "amount": 5093.13,
           "due_date": "2026-11-01",
           "days_until": 15
+        }
+      ]
+    },
+    "💳 邮储 2269.58 元": {
+      "bank_name": "邮储银行",
+      "abbr": "邮储",
+      "label": "",
+      "sub_account": "",
+      "total_amount": 2269.58,
+      "due_date": "2026-11-06",
+      "details": [
+        {
+          "subject": "邮储银行信用卡电子账单",
+          "amount": 2269.58,
+          "due_date": "2026-11-06",
+          "days_until": 20
         }
       ]
     }
