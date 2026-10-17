@@ -1,14 +1,8 @@
 {
-  "last_sync": "2026-10-17 06:25:35",
-  "created_count": 1,
+  "last_sync": "2026-10-17 11:51:54",
+  "created_count": 0,
   "skipped_count": 0,
-  "created_tasks": [
-    {
-      "bank": "邮储银行",
-      "task_id": "6ad314dfe4b0be9ee7f9bdb4",
-      "title": "💳 邮储 2269.58 元"
-    }
-  ],
+  "created_tasks": [],
   "last_seen_titles": {
     "💳 民生 24305.66 元": {
       "bank_name": "民生银行",
