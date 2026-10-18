@@ -1,8 +1,14 @@
 {
-  "last_sync": "2026-10-17 22:03:08",
-  "created_count": 0,
+  "last_sync": "2026-10-18 06:50:59",
+  "created_count": 1,
   "skipped_count": 0,
-  "created_tasks": [],
+  "created_tasks": [
+    {
+      "bank": "广发银行",
+      "task_id": "6ad46c52e4b05503d4d22df4",
+      "title": "💳 广发 130.30 元"
+    }
+  ],
   "last_seen_titles": {
     "💳 民生 24305.66 元": {
       "bank_name": "民生银行",
@@ -113,6 +119,22 @@
           "amount": 5093.13,
           "due_date": "2026-11-01",
           "days_until": 14
+        }
+      ]
+    },
+    "💳 广发 130.30 元": {
+      "bank_name": "广发银行",
+      "abbr": "广发",
+      "label": "",
+      "sub_account": "",
+      "total_amount": 130.3,
+      "due_date": "2026-11-06",
+      "details": [
+        {
+          "subject": "广发信用卡 2026年10月电子账单",
+          "amount": 130.3,
+          "due_date": "2026-11-06",
+          "days_until": 19
         }
       ]
     },
