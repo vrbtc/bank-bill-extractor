@@ -1,6 +1,49 @@
 {
-  "generated_at": "2026-10-17 05:08:00",
+  "generated_at": "2026-10-18 05:13:51",
   "bills": [
+    {
+      "subject": "广发信用卡 2026年10月电子账单",
+      "date": "Sun, 18 Oct 2026 10:47:29 +0800",
+      "amounts": [
+        {
+          "value": 130.3,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-11-06"
+      ],
+      "statement_dates": [
+        "2026-10-17"
+      ],
+      "statement_day": null,
+      "credit_limit": 50000.0,
+      "bank_name": "广发银行",
+      "source_label": "",
+      "source_email": "rrking@aliyun.com"
+    },
+    {
+      "subject": "邮储银行信用卡电子账单",
+      "date": "Sat, 17 Oct 2026 13:50:03 +0800",
+      "amounts": [
+        {
+          "value": 2269.58,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-11-06"
+      ],
+      "statement_dates": [
+        "2026-10-16"
+      ],
+      "statement_day": 16,
+      "credit_limit": 125000.0,
+      "bank_name": "邮储银行",
+      "last4": "4321",
+      "source_label": "",
+      "source_email": "rrking@aliyun.com"
+    },
     {
       "subject": "平安信用卡电子账单",
       "date": "Thu, 15 Oct 2026 20:52:49 +0800 (CST)",
@@ -246,7 +289,7 @@
       "statement_day": null,
       "credit_limit": 58000.0,
       "bank_name": "交通银行",
-      "last4": "9545",
+      "last4": "1338",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     },
@@ -307,27 +350,6 @@
       "statement_day": null,
       "credit_limit": null,
       "bank_name": "招商银行",
-      "source_label": "",
-      "source_email": "rrking@aliyun.com"
-    },
-    {
-      "subject": "广发信用卡 2026年09月电子账单",
-      "date": "Fri, 18 Sep 2026 10:44:14 +0800",
-      "amounts": [
-        {
-          "value": 48611.36,
-          "currency": "CNY"
-        }
-      ],
-      "due_dates": [
-        "2026-10-06"
-      ],
-      "statement_dates": [
-        "2026-09-17"
-      ],
-      "statement_day": null,
-      "credit_limit": 50000.0,
-      "bank_name": "广发银行",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     }
