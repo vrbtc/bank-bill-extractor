@@ -1,14 +1,8 @@
 {
-  "last_sync": "2026-10-18 06:50:59",
-  "created_count": 1,
+  "last_sync": "2026-10-18 12:17:54",
+  "created_count": 0,
   "skipped_count": 0,
-  "created_tasks": [
-    {
-      "bank": "广发银行",
-      "task_id": "6ad46c52e4b05503d4d22df4",
-      "title": "💳 广发 130.30 元"
-    }
-  ],
+  "created_tasks": [],
   "last_seen_titles": {
     "💳 民生 24305.66 元": {
       "bank_name": "民生银行",
@@ -23,22 +17,6 @@
           "amount": 24305.66,
           "due_date": "2026-10-17",
           "days_until": -1
-        }
-      ]
-    },
-    "💳 工行 37201.31 元": {
-      "bank_name": "工商银行",
-      "abbr": "工行",
-      "label": "",
-      "sub_account": "",
-      "total_amount": 37201.31,
-      "due_date": "2026-10-19",
-      "details": [
-        {
-          "subject": "中国工商银行客户对账单(ICBC Peony Card Bank Statement)",
-          "amount": 37201.31,
-          "due_date": "2026-10-19",
-          "days_until": 1
         }
       ]
     },
