@@ -1,8 +1,19 @@
 {
-  "last_sync": "2026-10-18 22:18:17",
-  "created_count": 0,
+  "last_sync": "2026-10-19 07:09:39",
+  "created_count": 2,
   "skipped_count": 0,
-  "created_tasks": [],
+  "created_tasks": [
+    {
+      "bank": "招商银行",
+      "task_id": "6ad5c232e4b0a7dd3f22c394",
+      "title": "💳 招行分期卡 2986.72 元"
+    },
+    {
+      "bank": "招商银行",
+      "task_id": "6ad5c233e4b0a7dd3f22c3a3",
+      "title": "💳 招行 8462.30 元"
+    }
+  ],
   "last_seen_titles": {
     "💳 浦发 22934.88 元": {
       "bank_name": "浦发银行",
@@ -81,6 +92,38 @@
           "amount": 5093.13,
           "due_date": "2026-11-01",
           "days_until": 13
+        }
+      ]
+    },
+    "💳 招行分期卡 2986.72 元": {
+      "bank_name": "招商银行",
+      "abbr": "招行",
+      "label": "",
+      "sub_account": "分期卡",
+      "total_amount": 2986.72,
+      "due_date": "2026-11-06",
+      "details": [
+        {
+          "subject": "招商银行分期信用卡电子账单",
+          "amount": 2986.72,
+          "due_date": "2026-11-06",
+          "days_until": 18
+        }
+      ]
+    },
+    "💳 招行 8462.30 元": {
+      "bank_name": "招商银行",
+      "abbr": "招行",
+      "label": "",
+      "sub_account": "",
+      "total_amount": 8462.3,
+      "due_date": "2026-11-06",
+      "details": [
+        {
+          "subject": "招商银行信用卡电子账单",
+          "amount": 8462.3,
+          "due_date": "2026-11-06",
+          "days_until": 18
         }
       ]
     },
