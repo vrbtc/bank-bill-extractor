@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-20 05:27:48",
+  "generated_at": "2026-10-21 05:27:25",
   "bills": [
     {
       "subject": "招商银行分期信用卡电子账单",
@@ -327,7 +327,7 @@
       "statement_day": null,
       "credit_limit": 58000.0,
       "bank_name": "交通银行",
-      "last4": "3318",
+      "last4": "9545",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     }
