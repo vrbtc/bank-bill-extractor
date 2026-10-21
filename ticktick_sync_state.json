@@ -1,8 +1,14 @@
 {
-  "last_sync": "2026-10-21 18:31:23",
-  "created_count": 0,
+  "last_sync": "2026-10-21 23:05:27",
+  "created_count": 1,
   "skipped_count": 0,
-  "created_tasks": [],
+  "created_tasks": [
+    {
+      "bank": "交通银行",
+      "task_id": "6ad94537e4b04e4b6148fa71",
+      "title": "💳 交行 54762.78 元"
+    }
+  ],
   "last_seen_titles": {
     "💳 浦发 22934.88 元": {
       "bank_name": "浦发银行",
@@ -161,6 +167,22 @@
           "amount": 246.7,
           "due_date": "2026-11-07",
           "days_until": 16
+        }
+      ]
+    },
+    "💳 交行 54762.78 元": {
+      "bank_name": "交通银行",
+      "abbr": "交行",
+      "label": "",
+      "sub_account": "",
+      "total_amount": 54762.78,
+      "due_date": "2026-11-15",
+      "details": [
+        {
+          "subject": "交通银行白金信用卡2026年10月电子账单",
+          "amount": 54762.78,
+          "due_date": "2026-11-15",
+          "days_until": 24
         }
       ]
     }
