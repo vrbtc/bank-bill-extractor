@@ -1,6 +1,28 @@
 {
-  "generated_at": "2026-10-21 05:27:25",
+  "generated_at": "2026-10-22 05:32:20",
   "bills": [
+    {
+      "subject": "交通银行白金信用卡2026年10月电子账单",
+      "date": "Thu, 22 Oct 2026 06:23:33 +0800",
+      "amounts": [
+        {
+          "value": 54762.78,
+          "currency": "CNY"
+        }
+      ],
+      "due_dates": [
+        "2026-11-15"
+      ],
+      "statement_dates": [
+        "2026-09-22"
+      ],
+      "statement_day": null,
+      "credit_limit": 58000.0,
+      "bank_name": "交通银行",
+      "last4": "3318",
+      "source_label": "",
+      "source_email": "rrking@aliyun.com"
+    },
     {
       "subject": "招商银行分期信用卡电子账单",
       "date": "Mon, 19 Oct 2026 12:23:05 +0800 (CST)",
@@ -306,28 +328,6 @@
       "statement_day": null,
       "credit_limit": 80000.0,
       "bank_name": "建设银行",
-      "source_label": "",
-      "source_email": "rrking@aliyun.com"
-    },
-    {
-      "subject": "交通银行白金信用卡2026年09月电子账单",
-      "date": "Tue, 22 Sep 2026 07:37:27 +0800",
-      "amounts": [
-        {
-          "value": 5541.79,
-          "currency": "CNY"
-        }
-      ],
-      "due_dates": [
-        "2026-10-15"
-      ],
-      "statement_dates": [
-        "2026-08-22"
-      ],
-      "statement_day": null,
-      "credit_limit": 58000.0,
-      "bank_name": "交通银行",
-      "last4": "9545",
       "source_label": "",
       "source_email": "rrking@aliyun.com"
     }
