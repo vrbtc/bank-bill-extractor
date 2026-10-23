@@ -4,5 +4,21 @@
   "imap_server": "imap.aliyun.com",
   "imap_port": 993,
   "ticktick_api_key": "dp_your_api_key_here",
-  "feishu_webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/your_hook_id"
+  "feishu_webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/your_hook_id",
+  "emails": [
+    {
+      "address": "y***@aliyun.com",
+      "password": "your_password_here",
+      "imap_server": "imap.aliyun.com",
+      "imap_port": 993,
+      "label": ""
+    },
+    {
+      "address": "y***@qq.com",
+      "password": "your_qq_auth_code_here",
+      "imap_server": "imap.qq.com",
+      "imap_port": 993,
+      "label": "YY"
+    }
+  ]
 }

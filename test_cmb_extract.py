@@ -11,10 +11,13 @@ import re
 import html2text
 from bs4 import BeautifulSoup
 
-EMAIL_ADDRESS = "rrking@aliyun.com"
-PASSWORD = "Aa2599589"
-IMAP_SERVER = "imap.aliyun.com"
-IMAP_PORT = 993
+# 凭据统一从 config.json 导入（2026-10-23 安全整改：移除硬编码；config.json 已 gitignore）
+from config import get_all_emails as _get_all_emails
+_email_cfg = (_get_all_emails() or [{}])[0]
+EMAIL_ADDRESS = _email_cfg.get('address', '')
+PASSWORD = _email_cfg.get('password', '')
+IMAP_SERVER = _email_cfg.get('imap_server', 'imap.aliyun.com')
+IMAP_PORT = int(_email_cfg.get('imap_port') or 993)
 
 def decode_mime_words(s):
     if not s:

@@ -6,13 +6,15 @@ _精简版 - 快速上手_
 
 ## 🔑 一、API 认证
 
-**API Key**: `dp_5dd5bf5607374d03bf0856775b94592f`
+**API Key**: 保存在本地 `config.json` 的 `ticktick_api_key` 字段（该文件已 gitignore）
+
+> ⚠️ 2026-10-23 安全整改：本仓库曾因多处硬编码 Key 导致凭据公网泄露，现已全部改为从 `config.json` 读取。**任何文档/脚本不得再出现明文 Key。**
 
 **基础 URL**: `https://api.dida365.com/open/v1`
 
 **请求头**:
 ```
-Authorization: Bearer dp_5dd5bf5607374d03bf0856775b94592f
+Authorization: Bearer <config.json 中的 ticktick_api_key>
 Content-Type: application/json
 ```
 
@@ -22,9 +24,12 @@ Content-Type: application/json
 
 ### 1. 获取项目列表
 ```python
-import requests
+import json, os, requests
 
-headers = {"Authorization": "Bearer dp_5dd5bf5607374d03bf0856775b94592f"}
+# Key 从 config.json 读取（与项目其他模块一致，勿硬编码）
+_cfg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+API_KEY = json.load(open(_cfg, encoding="utf-8"))["ticktick_api_key"]
+headers = {"Authorization": f"Bearer {API_KEY}"}
 projects = requests.get("https://api.dida365.com/open/v1/project", headers=headers).json()
 ```
 
@@ -104,10 +109,12 @@ requests.post(
 ## 💡 五、完整示例（信用卡还款）
 
 ```python
-import requests
+import json, os
 from datetime import datetime, timedelta
 
-API_KEY = "dp_5dd5bf5607374d03bf0856775b94592f"
+# Key 从 config.json 读取（勿硬编码）
+_cfg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+API_KEY = json.load(open(_cfg, encoding="utf-8"))["ticktick_api_key"]
 BASE_URL = "https://api.dida365.com/open/v1"
 HEADERS = {"Authorization": f"Bearer {API_KEY}"}
 

@@ -306,9 +306,11 @@ def send_email(message):
     msg['From'] = 'rrking@aliyun.com'
     msg['To'] = 'rrking@aliyun.com'
     
-    # 配置 SMTP
+    # 配置 SMTP（凭据从 config.json 读取，2026-10-23 安全整改，勿再硬编码）
+    import json, os
+    _cfg = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json"), encoding="utf-8"))
     server = smtplib.SMTP_SSL('smtp.aliyun.com', 465)
-    server.login('rrking@aliyun.com', 'Aa2599589')
+    server.login(_cfg["email_address"], _cfg["email_password"])
     server.send_message(msg)
     server.quit()
 ```

@@ -117,8 +117,8 @@ gh-pages/
 #     ticktick_completed_amounts.json 为云端主架构状态文件，随 repo 持久化
 #     （云端每次运行后 commit 回 main，形成完成检测闭环），不再忽略
 
-# Windows task scheduler exports
-BankBillDaily_task.xml
+# Windows task scheduler exports（任务定义已入仓，供换电脑交接使用，见 HANDOVER.md；
+# daily_run.bat 仍为本地文件，内容见 HANDOVER.md Step 5）
 
 # Batch/script helpers (local-only)
 daily_run.bat
