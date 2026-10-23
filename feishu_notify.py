@@ -195,6 +195,120 @@ class FeishuNotifier:
                 })
         return result
 
+    def send_extraction_alerts(self, failures=None, suspicious=None,
+                               needs_review=None, email_errors=None, dry_run=False):
+        """推送「待人工提取」告警卡片（P0-1/P0-2/P0-3/P0-4）。
+
+        提取失败此前全程静默（入链 → 滴答跳过 → 零 ERROR），本卡片把
+        失败/可疑/待确认/邮箱故障集中推送到飞书群，供人工跟进。
+
+        Args:
+            failures: collect_quality_alerts()['extraction_failures']
+            suspicious: collect_quality_alerts()['suspicious']
+            needs_review: collect_quality_alerts()['needs_review']
+            email_errors: collect_quality_alerts()['email_failures']
+            dry_run: True 时只返回构建的 payload 不实际发送
+
+        Returns:
+            dict: 飞书响应；无告警或不在推送时段时返回 {'skipped': True, ...}
+        """
+        from datetime import datetime, timezone, timedelta
+
+        failures = failures or []
+        suspicious = suspicious or []
+        needs_review = needs_review or []
+        email_errors = email_errors or []
+
+        if not (failures or suspicious or needs_review or email_errors):
+            return {"skipped": True, "reason": "no_alerts",
+                    "StatusMessage": "No extraction alerts, skip push"}
+
+        # 时段守卫：北京 09:00-22:30 之外只记录不推送（与常规推送一致，免打扰）
+        bj_tz = timezone(timedelta(hours=8))
+        now_bj = datetime.now(bj_tz)
+        if not dry_run and not (9 <= now_bj.hour < 22 or (now_bj.hour == 22 and now_bj.minute <= 30)):
+            print(f"  ℹ️ 提取告警在推送时段之外（北京 {now_bj.strftime('%H:%M')}），跳过推送")
+            return {"skipped": True, "reason": "outside_push_window",
+                    "StatusMessage": "Outside push window, skip push"}
+
+        today_str = now_bj.strftime("%Y-%m-%d")
+
+        def _label_of(item):
+            label = item.get('label') or ''
+            return f" ({label})" if label else ''
+
+        def _due_of(item):
+            dues = item.get('due_dates') or []
+            return dues[0] if dues else '未知'
+
+        elements = [{
+            "tag": "div",
+            "text": {
+                "tag": "lark_md",
+                "content": f"**🚨 账单提取告警**\n{today_str}（北京时间）"
+            }
+        }, {"tag": "hr"}]
+
+        if failures:
+            lines = [f"**❌ 待人工提取（{len(failures)} 封，金额未抓到）**"]
+            for f in failures:
+                lines.append(
+                    f"• {f.get('bank', '?')}{_label_of(f)}「{f.get('subject', '')}」"
+                    f" 邮件 {str(f.get('date', ''))[:16]} 还款日 {_due_of(f)}"
+                )
+                lines.append(f"  原因：{f.get('reason', '')}")
+            elements.append({"tag": "div", "text": {"tag": "lark_md", "content": "\n".join(lines)}})
+
+        if suspicious:
+            lines = [f"**⚠️ 疑似误提取（{len(suspicious)} 封，请人工核对）**"]
+            for s in suspicious:
+                amounts = s.get('amounts') or []
+                amt_text = f"¥{amounts[0]:,.2f}" if amounts else "?"
+                lines.append(
+                    f"• {s.get('bank', '?')}{_label_of(s)} 金额 {amt_text}"
+                    f"（还款日 {_due_of(s)}）"
+                )
+                lines.append(f"  原因：{s.get('reason', '')}")
+            elements.append({"tag": "div", "text": {"tag": "lark_md", "content": "\n".join(lines)}})
+
+        if needs_review:
+            lines = [f"**📝 还款日缺失待确认（{len(needs_review)} 封，未编造日期）**"]
+            for n in needs_review:
+                amounts = n.get('amounts') or []
+                amt_text = f"¥{amounts[0]:,.2f}" if amounts else "?"
+                lines.append(f"• {n.get('bank', '?')}{_label_of(n)} 金额 {amt_text}「{n.get('subject', '')}」")
+            elements.append({"tag": "div", "text": {"tag": "lark_md", "content": "\n".join(lines)}})
+
+        if email_errors:
+            lines = [f"**📧 邮箱拉取失败（{len(email_errors)} 个）**"]
+            for e in email_errors:
+                lines.append(f"• {e.get('email', '?')} ({e.get('label', '')})：{e.get('error', '')}")
+            elements.append({"tag": "div", "text": {"tag": "lark_md", "content": "\n".join(lines)}})
+
+        elements.append({"tag": "hr"})
+        elements.append({
+            "tag": "div",
+            "text": {
+                "tag": "lark_md",
+                "content": "请人工核对原邮件并补录真实金额/还款日（系统不再静默丢弃）"
+            }
+        })
+
+        payload = {
+            "msg_type": "interactive",
+            "card": {
+                "header": {
+                    "title": {"tag": "plain_text", "content": "🚨 账单提取告警"},
+                    "template": "red" if failures else "orange"
+                },
+                "elements": elements
+            }
+        }
+
+        if dry_run:
+            return payload
+        return self._send(payload)
+
     def send_today_tasks(self, api_key=None, days=1, dry_run=False):
         """推送代办事项汇总到飞书群（不限于账单）
 

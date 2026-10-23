@@ -9,8 +9,9 @@
 
 import os
 import email
+import email.utils
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from collections import defaultdict
 
 from email_client import EmailClient
@@ -44,17 +45,39 @@ class BillExtractor:
     }
 
     # 跳过的账单邮件主题关键词（不含金额的纯通知类邮件）
-    SKIP_SUBJECT_KEYWORDS = ['补制']
+    # P0-5：「还款提醒」类邮件滞后一个周期且金额与上期相同，当账单处理会
+    # 生成幽灵账单（如【广发卡 10月还款提醒】→ ¥48,611.36/10-06）；
+    # 章程/公告/认证/授权书为银行通知而非账单；BOCHK 为扣账卡综合对账单，
+    # 非信用卡账单（无可还款金额）。
+    SKIP_SUBJECT_KEYWORDS = [
+        '补制', '（补）', '(补)', '还款提醒', '提醒', '章程', '公告', '认证', '授权书',
+        '领用合约', '更新版本', 'BOCHK',
+    ]
+
+    # 已知账单主题模式（P0-5 白名单，从 2026-10-23 邮件审计的
+    # bill_email_subjects 归纳）：命中才会进入提取链；
+    # 白名单外但含银行关键词的邮件只记 WARN，不静默入链。
+    BILL_SUBJECT_PATTERNS = [
+        '电子账单', '信用卡账单', '电子对账单', '对账单',
+        '消费信贷账单', '账单', 'statement',
+    ]
     
     def __init__(self):
         self.email_decoder = EmailDecoder()
         self.bank_factory = BankExtractorFactory()
-    
-    def fetch_and_extract(self, limit=50):
+        # 单邮箱故障记录（P0-4）：{email, label, error}
+        self.email_failures = []
+        # 白名单外命中银行关键词的主题（P0-5）：只 WARN 不入链
+        self.unrecognized_subjects = []
+
+    def fetch_and_extract(self, limit=100):
         """获取并提取账单（多邮箱模式）
 
         遍历 config.get_all_emails() 返回的所有邮箱，
         每封账单邮件会带上 source_label 字段。
+
+        P0-4 单邮箱故障隔离：某个邮箱连接/拉取失败不影响其他邮箱，
+        失败记入 self.email_failures 供告警。
         """
         all_bills = []
         emails_config = get_all_emails()
@@ -67,12 +90,22 @@ class BillExtractor:
         for i, em_cfg in enumerate(emails_config, 1):
             label_display = f" (label={em_cfg['label']})" if em_cfg['label'] else ""
             print(f"\n--- 邮箱 {i}/{len(emails_config)}: {em_cfg['address']}{label_display} ---")
-            bills = self._fetch_from_one_email(em_cfg, limit=limit)
+            try:
+                bills = self._fetch_from_one_email(em_cfg, limit=limit)
+            except Exception as e:
+                # 单邮箱故障隔离：记录并继续，不拖垮全盘
+                self.email_failures.append({
+                    'email': em_cfg['address'],
+                    'label': em_cfg.get('label', ''),
+                    'error': str(e),
+                })
+                print(f"❌ ERROR: 邮箱 {em_cfg['address']} 拉取失败（不影响其他邮箱）: {e}")
+                continue
             all_bills.extend(bills)
 
         return all_bills
 
-    def _fetch_from_one_email(self, em_cfg, limit=50):
+    def _fetch_from_one_email(self, em_cfg, limit=100):
         """从单个邮箱拉取并提取账单"""
         client = EmailClient(
             em_cfg['imap_server'],
@@ -93,9 +126,17 @@ class BillExtractor:
                 html_body = self._extract_html_body(msg)
                 
                 if self._is_bill_email(subject):
-                    # 跳过补制类邮件（不含金额）
+                    # 跳过补制/提醒/公告类邮件（不含金额或非账单）
                     if self._is_skip_subject(subject):
                         print(f"[{idx}] ⏭️ 跳过通知类账单邮件: {subject}")
+                        continue
+                    # P0-5 主题白名单：白名单外的银行关键词邮件只 WARN 不入链
+                    if not self._is_known_bill_subject(subject):
+                        print(f"[{idx}] ⚠️ WARN: 非已知账单主题模式，仅记录不入链: {subject}")
+                        self.unrecognized_subjects.append({
+                            'subject': subject, 'date': date,
+                            'email': em_cfg['address'], 'label': em_cfg.get('label', ''),
+                        })
                         continue
                     print(f"[{idx}] {subject}")
                     bills = self.extract_from_html(html_body, subject, date)
@@ -110,11 +151,16 @@ class BillExtractor:
             client.disconnect()
 
     def _is_skip_subject(self, subject):
-        """判断是否应跳过此账单邮件（如补制类不含金额）"""
+        """判断是否应跳过此账单邮件（如补制/还款提醒类不含金额或非账单）"""
         for kw in self.SKIP_SUBJECT_KEYWORDS:
             if kw in subject:
                 return True
         return False
+
+    def _is_known_bill_subject(self, subject):
+        """判断主题是否命中已知账单模式（白名单）。"""
+        s = (subject or '').lower()
+        return any(p.lower() in s for p in self.BILL_SUBJECT_PATTERNS)
     
     def _extract_html_body(self, msg):
         """提取邮件 HTML 内容"""
@@ -154,6 +200,11 @@ class BillExtractor:
         
         bank_name = self._identify_bank(full_text)
         if not bank_name:
+            # 白名单主题但无法识别银行（如订阅类账单邮件）：只记 WARN
+            print(f"  ⚠️ WARN: 无法识别银行的账单主题: {subject}")
+            self.unrecognized_subjects.append({
+                'subject': subject, 'date': date, 'reason': '无法识别银行',
+            })
             return bills
         
         extractor = self.bank_factory.create_extractor(bank_name)
@@ -187,13 +238,48 @@ class BillExtractor:
             self._fill_statement_date_from_day(bill_info, date)
         
         if bill_info['amounts'] and not bill_info['due_dates']:
-            self._set_default_due_date(bill_info, date)
-        
-        if bill_info['amounts'] or bill_info['due_dates']:
-            bills.append(bill_info)
-            self._print_bill_info(bill_info)
+            # P0-3：不再编造「邮件日+20 天」假还款日——错日期比没日期危险。
+            # 标记待人工确认并告警，由人工补真实还款日。
+            bill_info['needs_review'] = True
+            bill_info['review_reason'] = '金额已提取但还款日缺失（未编造默认日期，需人工确认）'
+            print(f"  ⚠️ WARN: {bank_name} 金额已提取但还款日缺失，标记 needs_review（不编造日期）")
+
+        if not bill_info['amounts']:
+            # P0-1：识别为账单邮件但金额为空 → 标记提取失败，不再静默丢弃
+            # （此前「有 due 无 amount」照常入链，滴答侧再静默跳过，全程零感知）
+            bill_info['extraction_failed'] = True
+            bill_info['failure_reason'] = self._diagnose_failure(bill_info, html_content, extractor)
+            print(f"  ❌ ERROR: {bank_name} 金额提取失败 - {bill_info['failure_reason']}")
+
+        # P0-2：提取层合理性闸门（额度×1%，先只告警不拦截）
+        try:
+            extractor.check_reasonableness(bill_info)
+        except Exception:
+            pass
+        if bill_info.get('suspicious'):
+            print(f"  ⚠️ WARN: {bank_name} {bill_info.get('suspicious_reason', '金额可疑')}")
+
+        # 白名单内的账单邮件一律入链（含失败/待确认标记），不再静默丢弃
+        bills.append(bill_info)
+        self._print_bill_info(bill_info)
         
         return bills
+
+    def _diagnose_failure(self, bill_info, html_content, extractor):
+        """生成提取失败原因（供「待人工提取」告警卡片定位问题）。"""
+        extractor_name = type(extractor).__name__
+        if not html_content or not html_content.strip():
+            return f"{extractor_name}.extract_amount 落空：邮件无 HTML 正文（纯文本或解码失败）"
+        try:
+            from bs4 import BeautifulSoup
+            text = ' '.join(BeautifulSoup(html_content, 'html.parser').get_text().split())
+        except Exception:
+            text = ''
+        anchors = [kw for kw in ('应还', '账单金额', 'New Balance', 'RMB', '￥') if kw in text]
+        if anchors:
+            return (f"{extractor_name}.extract_amount 所有模式落空"
+                    f"（HTML {len(html_content)} 字节，文本含关键词 {anchors}，疑版式不匹配）")
+        return f"{extractor_name}.extract_amount 所有模式落空（HTML {len(html_content)} 字节，文本无应还/金额关键词）"
 
     def _fill_statement_date_from_day(self, bill_info, email_date_str):
         """仅有账单日「日」时，结合还款日/邮件日推断完整日期。"""
@@ -239,15 +325,13 @@ class BillExtractor:
             pass
     
     def _set_default_due_date(self, bill_info, date):
-        """设置默认还款日"""
-        try:
-            email_date = email.utils.parsedate_tz(date)
-            if email_date:
-                base_date = datetime(*email_date[:6])
-                due_date = base_date + timedelta(days=20)
-                bill_info['due_dates'].append(due_date.strftime('%Y-%m-%d'))
-        except:
-            pass
+        """已废弃（P0-3）：不再编造「邮件日+20 天」假还款日。
+
+        错日期比没日期危险：假 deadline 会直接变成滴答任务。
+        现在由 extract_from_html 标记 needs_review 并告警。
+        保留此方法仅为向后兼容旧代码引用，不再产生任何日期。
+        """
+        return
     
     def _print_bill_info(self, bill_info):
         """打印账单信息"""
@@ -261,17 +345,23 @@ class BillExtractor:
             print(f"    额度：{bill_info['credit_limit']:,.0f}")
         if bill_info.get('statement_dates'):
             print(f"    账单日：{bill_info['statement_dates'][:2]}")
+        if bill_info.get('extraction_failed'):
+            print(f"    ❌ 提取失败：{bill_info.get('failure_reason', '')}")
+        if bill_info.get('needs_review'):
+            print(f"    ⚠️ 待人工确认：{bill_info.get('review_reason', '')}")
+        if bill_info.get('suspicious'):
+            print(f"    ⚠️ 金额可疑：{bill_info.get('suspicious_reason', '')}")
 
 
-def get_upcoming_bills(bills, days=None, include_overdue_days=3):
-    """
-    获取未来账单（按日期比较，避免「今天还款」被算成 -1 天漏掉）
-    days: None 表示获取所有未来账单，数字表示未来多少天
-    include_overdue_days: 包含已过期 N 天内的账单（默认 3 天，避免当天/时区边界漏单）
+def _aggregate_bill_groups(bills, should_include):
+    """按 银行|子账户|label|还款日 聚合账单（get_upcoming_bills / get_overdue_bills 共用）。
 
-    多邮箱模式：同银行不同 source_label 分别聚合（key = bank_name|label）
-    按还款日分组：同银行不同还款日的账单分开聚合（key 追加 |due_date，
-    与 ticktick_sync 的分组保持一致），避免合并成错误总额+还款日错乱
+    Args:
+        bills: extract_from_html 产出的账单列表
+        should_include: 回调 fn(days_until) -> bool，决定该还款日是否进入聚合
+
+    Returns:
+        dict: bank_key -> 聚合信息（total_amount / amounts / earliest_due_date 等）
     """
     # 使用北京时间的「日期」做比较，与仪表盘时区一致
     try:
@@ -313,14 +403,12 @@ def get_upcoming_bills(bills, days=None, include_overdue_days=3):
             days_until = (parsed_date - today).days
 
             # 包含今天 + 未来 + 短宽限过期，避免漏掉当日还款账单
-            if days_until >= -include_overdue_days:
-                if days is None or days_until <= days:
-                    # 优先选最近的还款日（含今天=0，过期取绝对值最小）
-                    if best_days_until is None or abs(days_until) < abs(best_days_until) or (
-                        abs(days_until) == abs(best_days_until) and days_until > best_days_until
-                    ):
-                        best_days_until = days_until
-                        best_due_date = due_date_str
+            if should_include(days_until):
+                if best_days_until is None or abs(days_until) < abs(best_days_until) or (
+                    abs(days_until) == abs(best_days_until) and days_until > best_days_until
+                ):
+                    best_days_until = days_until
+                    best_due_date = due_date_str
 
         if best_due_date and best_days_until is not None:
             # 按还款日分组：同银行不同还款日的账单分开（如邮储两张卡 09-27 与 10-07、
@@ -357,6 +445,78 @@ def get_upcoming_bills(bills, days=None, include_overdue_days=3):
             }
 
     return bank_bills
+
+
+def get_upcoming_bills(bills, days=None, include_overdue_days=3):
+    """
+    获取未来账单（按日期比较，避免「今天还款」被算成 -1 天漏掉）
+    days: None 表示获取所有未来账单，数字表示未来多少天
+    include_overdue_days: 包含已过期 N 天内的账单（默认 3 天，避免当天/时区边界漏单）
+
+    多邮箱模式：同银行不同 source_label 分别聚合（key = bank_name|label）
+    按还款日分组：同银行不同还款日的账单分开聚合（key 追加 |due_date，
+    与 ticktick_sync 的分组保持一致），避免合并成错误总额+还款日错乱
+    """
+    def _should_include(days_until):
+        if days_until < -include_overdue_days:
+            return False
+        return days is None or days_until <= days
+
+    return _aggregate_bill_groups(bills, _should_include)
+
+
+def get_overdue_bills(bills, grace_days=3):
+    """获取超过宽限期仍未确认的账单分组（P0-6 可见性修复）。
+
+    滴答侧 sync_bills 本就保留逾期任务直到用户勾选；报表/仪表盘此前用
+    -3 天宽限把超期账单「隐藏」了。此函数按相同分组口径取出
+    days_until < -grace_days 的账单，供报表/仪表盘展示（需人工核实是否已还）。
+    注意：返回结果含总额为 0.00 的组（本期无需还款），展示侧应过滤。
+    """
+    def _should_include(days_until):
+        return days_until < -grace_days
+
+    return _aggregate_bill_groups(bills, _should_include)
+
+
+def collect_quality_alerts(bills, email_failures=None, unrecognized=None):
+    """汇总提取质量告警清单（P0-1/P0-2/P0-3/P0-4）。
+
+    Returns:
+        dict: {
+            'extraction_failures': [...],  # 识别为账单但金额为空
+            'suspicious': [...],           # 金额低于额度×1%（疑似误抓）
+            'needs_review': [...],         # 有金额无还款日（未编造日期）
+            'email_failures': [...],       # 单邮箱故障
+            'unrecognized_subjects': [...],# 白名单外的银行关键词邮件
+        }
+    """
+    def _entry(bill, reason):
+        return {
+            'bank': bill.get('bank_name', ''),
+            'label': bill.get('source_label', ''),
+            'subject': bill.get('subject', ''),
+            'date': bill.get('date', ''),
+            'due_dates': bill.get('due_dates', []),
+            'amounts': [a.get('value') for a in bill.get('amounts', [])],
+            'reason': reason,
+        }
+
+    failures, suspicious, needs_review = [], [], []
+    for bill in bills:
+        if bill.get('extraction_failed'):
+            failures.append(_entry(bill, bill.get('failure_reason', '')))
+        if bill.get('suspicious'):
+            suspicious.append(_entry(bill, bill.get('suspicious_reason', '')))
+        if bill.get('needs_review'):
+            needs_review.append(_entry(bill, bill.get('review_reason', '')))
+    return {
+        'extraction_failures': failures,
+        'suspicious': suspicious,
+        'needs_review': needs_review,
+        'email_failures': list(email_failures or []),
+        'unrecognized_subjects': list(unrecognized or []),
+    }
 
 
 def generate_report(bank_bills, title="本月待还款账单汇总（未来 15 天内）"):
@@ -397,27 +557,81 @@ def generate_report(bank_bills, title="本月待还款账单汇总（未来 15 �
     return total_all
 
 
+def generate_overdue_report(bank_bills, title="超过宽限期未确认账单（需人工核实是否已还）"):
+    """打印超过 3 天宽限期仍未确认的账单（P0-6 可见性）。"""
+    print("\n" + "="*80)
+    print(title)
+    print("="*80)
+
+    rows = [(k, i) for k, i in bank_bills.items()
+            if i['total_amount'] > 0 and i.get('earliest_due_date')]
+    if not rows:
+        print("\n无超过宽限期的未确认账单。")
+        return 0
+
+    rows.sort(key=lambda x: x[1]['earliest_due_date']['days_until'])
+    total = 0
+    for _, info in rows:
+        due = info['earliest_due_date']['date']
+        overdue_days = -info['earliest_due_date']['days_until']
+        label = f" ({info['source_label']})" if info['source_label'] else ''
+        sub = f"({info['sub_account']})" if info['sub_account'] else ''
+        print(f"  ⏰ {info['bank_name']}{sub}{label} ¥{info['total_amount']:>12,.2f}  "
+              f"还款日 {due}（已超期 {overdue_days} 天）")
+        total += info['total_amount']
+    print("-"*80)
+    print(f"合计 ¥{total:,.2f}（滴答清单中对应任务仍保留，勾选完成后不再显示）")
+    print("="*80)
+    return total
+
+
 def main():
     print("="*80)
     print("本月待还款账单查询（重构版）")
     print("="*80)
     
     extractor = BillExtractor()
-    bills = extractor.fetch_and_extract(limit=50)
+    bills = extractor.fetch_and_extract(limit=100)
     
     print(f"\n共分析 {len(bills)} 封账单邮件")
-    
+
+    # 提取质量告警汇总（P0-1/P0-2/P0-3/P0-4）
+    alerts = collect_quality_alerts(
+        bills,
+        email_failures=extractor.email_failures,
+        unrecognized=extractor.unrecognized_subjects,
+    )
+    if alerts['extraction_failures'] or alerts['suspicious'] or alerts['needs_review'] or alerts['email_failures']:
+        print("\n" + "!"*80)
+        print("⚠️ 提取质量告警：")
+        for f in alerts['extraction_failures']:
+            print(f"  ❌ 待人工提取: {f['bank']}{('(' + f['label'] + ')') if f['label'] else ''} "
+                  f"「{f['subject']}」 邮件 {f['date']} 还款日 {f['due_dates']} - {f['reason']}")
+        for s in alerts['suspicious']:
+            print(f"  ⚠️ 疑似误提取: {s['bank']}{('(' + s['label'] + ')') if s['label'] else ''} "
+                  f"金额 {s['amounts']} - {s['reason']}")
+        for n in alerts['needs_review']:
+            print(f"  ⚠️ 待人工确认: {n['bank']}{('(' + n['label'] + ')') if n['label'] else ''} "
+                  f"金额 {n['amounts']} - {n['reason']}")
+        for e in alerts['email_failures']:
+            print(f"  ❌ 邮箱故障: {e['email']} ({e.get('label', '')}) - {e['error']}")
+        print("!"*80)
+
     upcoming_bills = get_upcoming_bills(bills, days=None)
     total = generate_report(upcoming_bills, title="未来待还款账单汇总（所有未来账单）")
     
     upcoming_15 = get_upcoming_bills(bills, days=15)
     total_15 = generate_report(upcoming_15, title="近期待还款账单（未来 15 天内）")
+
+    overdue_bills = get_overdue_bills(bills)
+    generate_overdue_report(overdue_bills)
     
     with open('this_month_bills.json', 'w', encoding='utf-8') as f:
         json.dump({
             'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'total_bills': len(bills),
             'upcoming_total': total,
+            'extraction_alerts': alerts,
             'bills': bills
         }, f, ensure_ascii=False, indent=2)
     
