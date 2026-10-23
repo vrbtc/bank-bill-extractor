@@ -7,12 +7,19 @@
 
 import re
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timedelta
+from email.utils import parsedate_tz
 from bs4 import BeautifulSoup
 
 
 class BaseBankExtractor(ABC):
     """银行提取器基类"""
+
+    # 合理性闸门阈值：额度已知且 0 < 金额 < 额度×该比例 → 标 suspicious（P0-2）
+    SUSPICIOUS_RATIO = 0.01
+    # 还款日合理性窗口（相对邮件日期）：滤除上周期残值/远期噪声
+    DUE_WINDOW_PAST_DAYS = 40
+    DUE_WINDOW_FUTURE_DAYS = 60
     
     @abstractmethod
     def extract_amount(self, full_text, bill_info):
@@ -64,6 +71,95 @@ class BaseBankExtractor(ABC):
         text = text.replace('\xa0', ' ').replace('&nbsp;', ' ')
         text = text.replace('&yen;', '￥').replace('¥', '￥')
         return ' '.join(text.split())
+
+    @staticmethod
+    def _norm_date_str(date_str):
+        """归一化日期字符串为 ISO `YYYY-MM-DD`。
+
+        兼容 `2026/10/22`、`2026.10.22`、`2026年10月22日` 等写法；
+        无法解析时返回 None。所有 extractor 追加还款日前统一走此归一化
+        （修复浦发 `2026/10/22` 斜杠脏数据，P0 数据卫生）。
+        """
+        if not date_str:
+            return None
+        s = str(date_str).strip()
+        s = s.replace('年', '-').replace('月', '-').replace('日', '')
+        s = s.replace('/', '-').replace('.', '-')
+        s = re.sub(r'\s+', '', s)
+        parts = s.split('-')
+        if len(parts) != 3:
+            return None
+        try:
+            y, m, d = int(parts[0]), int(parts[1]), int(parts[2])
+            datetime(y, m, d)
+            return f"{y:04d}-{m:02d}-{d:02d}"
+        except Exception:
+            return None
+
+    def _append_due_date(self, bill_info, date_str):
+        """归一化后追加还款日（去重 + 格式校验），返回归一化值或 None。"""
+        norm = self._norm_date_str(date_str)
+        if not norm:
+            return None
+        if norm not in bill_info['due_dates']:
+            bill_info['due_dates'].append(norm)
+        return norm
+
+    @staticmethod
+    def _email_date(bill_info):
+        """从 bill_info['date']（邮件 Date 头）解析日期，失败返回 None。"""
+        raw = bill_info.get('date') or ''
+        try:
+            t = parsedate_tz(raw)
+            if t:
+                return datetime(*t[:3]).date()
+        except Exception:
+            pass
+        return None
+
+    def _search_anchored_due_date(self, patterns, full_text, clean_text):
+        """锚定还款日模式的两段式匹配（基类公共逻辑）。
+
+        1. 先在扁平化文本上匹配（锚点间只剩空格，`.{0,80}?` 紧界限足够）；
+        2. 未命中再回退原始 HTML（锚点间夹标签，放宽到 `.{0,300}?`）。
+        返回归一化日期或 None。间隔一律有界，避免无界 `.*?` 跨全文误取。
+        """
+        for regex in patterns:
+            m = re.search(regex, clean_text, re.IGNORECASE)
+            if m:
+                return self._norm_date_str(m.group(1))
+        for regex in patterns:
+            wide = regex.replace('.{0,80}?', '.{0,300}?')
+            m = re.search(wide, full_text, re.DOTALL | re.IGNORECASE)
+            if m:
+                return self._norm_date_str(m.group(1))
+        return None
+
+    def check_reasonableness(self, bill_info):
+        """提取层合理性闸门（P0-2，先只告警不拦截）。
+
+        额度已知且 0 < 金额 < 额度×1% → 标 `suspicious: true` 并记录原因
+        （典型场景：把交易明细里的手续费/利息当成本期应还）。
+        0.00（本期无需还款）与未知额度的情况不标记。
+        """
+        limit = bill_info.get('credit_limit')
+        if not limit:
+            return
+        try:
+            limit = float(limit)
+        except Exception:
+            return
+        if limit <= 0:
+            return
+        for amount_info in bill_info.get('amounts', []):
+            value = amount_info.get('value', 0) or 0
+            if 0 < value < limit * self.SUSPICIOUS_RATIO:
+                bill_info['suspicious'] = True
+                bill_info['suspicious_reason'] = (
+                    f"金额 ¥{value:,.2f} 低于信用额度 ¥{limit:,.0f} 的 1%，"
+                    f"疑似误提取，请人工核对"
+                )
+                return
 
     @staticmethod
     def _parse_money_token(token):
@@ -230,38 +326,19 @@ class GuangfaBankExtractor(BaseBankExtractor):
         
         due_match = re.search(r'最后还款日\s+入账货币\s+存款\s+卡片消费额度\s+\d+\s+[\d,]+\.\d+\s+[\d,]+\.\d+\s+(\d{4}/\d{2}/\d{2})', clean_text)
         if due_match:
-            date_str = due_match.group(1).replace('/', '-')
-            try:
-                datetime.strptime(date_str, '%Y-%m-%d')
-                if date_str not in bill_info['due_dates']:
-                    bill_info['due_dates'].append(date_str)
+            if self._append_due_date(bill_info, due_match.group(1)):
                 return
-            except:
-                pass
         
         due_match = re.search(r'最后还款日.*?(\d{4}/\d{2}/\d{2})', clean_text)
         if due_match:
-            date_str = due_match.group(1).replace('/', '-')
-            try:
-                datetime.strptime(date_str, '%Y-%m-%d')
-                if date_str not in bill_info['due_dates']:
-                    bill_info['due_dates'].append(date_str)
+            if self._append_due_date(bill_info, due_match.group(1)):
                 return
-            except:
-                pass
         
         due_patterns = [r'最后还款日.*?(\d{4}/\d{2}/\d{2})']
         for pattern in due_patterns:
             matches = re.findall(pattern, full_text)
             for match in matches:
-                date_str = match.replace('/', '-')
-                try:
-                    datetime.strptime(date_str, '%Y-%m-%d')
-                    if date_str not in bill_info['due_dates']:
-                        bill_info['due_dates'].append(date_str)
-                except:
-                    continue
-
+                self._append_due_date(bill_info, match)
 
 class CMBBankExtractor(BaseBankExtractor):
     """招商银行提取器"""
@@ -335,9 +412,7 @@ class CMBBankExtractor(BaseBankExtractor):
                 due_dates = [d for d in dates if d not in bill_dates]
                 
                 if due_dates:
-                    date_str = due_dates[0].replace('/', '-')
-                    if date_str not in bill_info['due_dates']:
-                        bill_info['due_dates'].append(date_str)
+                    self._append_due_date(bill_info, due_dates[0])
 
 
 class CCBBankExtractor(BaseBankExtractor):
@@ -397,20 +472,80 @@ class CCBBankExtractor(BaseBankExtractor):
                     bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
             except:
                 pass
+
+        # 模式4：文本兜底（P0-1：YY/QQ 邮箱版式与阿里云不同，上述 HTML 正则
+        # 全落空；对齐 ICBC 的 soup.get_text() 兜底策略）。
+        # 锚定摘要表「争议款/笔数 Dispute Amt/Nbr」后的人民币行首值
+        # = 本期全部应还款额；"-" 表示本期应还为 0（上期已全额还清，
+        # 2026-10 样本实证：非提取失败，确实无需还款）。
+        if bill_info['amounts']:
+            return
+        soup = BeautifulSoup(full_text, 'html.parser')
+        clean_text = ' '.join(soup.get_text().split())
+        amount_match = re.search(
+            r'争议款/笔数\s*Dispute Amt/Nbr\s*人民币（CNY）\s*(-|[0-9,]+\.[0-9]{2})',
+            clean_text,
+            re.IGNORECASE
+        )
+        if amount_match:
+            token = amount_match.group(1)
+            try:
+                amount = 0.0 if token == '-' else float(token.replace(',', ''))
+                bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+            except:
+                pass
     
     def extract_due_date(self, full_text, bill_info):
-        """提取建设银行还款日"""
+        """提取建设银行还款日
+
+        优先锚定「本期到期还款日 Payment Due Date」（当前周期还款日）；
+        回退通用模式时用邮件日 ±窗口滤除上周期残值（如明细表里的
+        2026-08-29），并取窗口内最晚日期（当前周期还款日最晚出现）。
+        """
+        # 1) 锚定模式：当前周期还款日（阿里云与 YY 模板均适用）。
+        # 先扁平化文本、再原始 HTML（基类 _search_anchored_due_date 处理）。
+        clean_text = ' '.join(BeautifulSoup(full_text, 'html.parser').get_text().split())
+        anchored_patterns = [
+            r'本期到期还款日.{0,80}?Payment Due Date.{0,80}?(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})',
+            r'本期到期还款日.{0,80}?(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)',
+            r'Payment Due Date.{0,80}?(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})',
+            r'Payment Due Date.{0,80}?(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)',
+        ]
+        anchored = self._search_anchored_due_date(anchored_patterns, full_text, clean_text)
+        if anchored and self._append_due_date(bill_info, anchored):
+            return
+
+        # 2) 回退：通用模式 + 邮件日窗口滤残值
         due_patterns = [
             r'到期还款日.*?([0-9]{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
             r'还款日.*?([0-9]{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
             r'Payment Due Date.*?([0-9]{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
         ]
-        
+        candidates = []
         for pattern in due_patterns:
-            matches = re.findall(pattern, full_text, re.DOTALL)
-            for match in matches:
-                if match not in bill_info['due_dates']:
-                    bill_info['due_dates'].append(match)
+            for match in re.findall(pattern, full_text, re.DOTALL):
+                norm = self._norm_date_str(match)
+                if norm and norm not in candidates:
+                    candidates.append(norm)
+        if not candidates:
+            return
+        # 窗口滤除：只接受 [邮件日-40天, 邮件日+60天]（P0 数据卫生）
+        email_date = self._email_date(bill_info)
+        if email_date:
+            lo = email_date - timedelta(days=self.DUE_WINDOW_PAST_DAYS)
+            hi = email_date + timedelta(days=self.DUE_WINDOW_FUTURE_DAYS)
+            windowed = []
+            for c in candidates:
+                try:
+                    d = datetime.strptime(c, '%Y-%m-%d').date()
+                except Exception:
+                    continue
+                if lo <= d <= hi:
+                    windowed.append(c)
+            candidates = windowed
+        if candidates:
+            # 当前周期还款日为窗口内最晚日期
+            self._append_due_date(bill_info, max(candidates))
 
 
 class CommBankExtractor(BaseBankExtractor):
@@ -464,8 +599,7 @@ class CommBankExtractor(BaseBankExtractor):
             re.DOTALL
         )
         if due_match:
-            if due_match.group(1) not in bill_info['due_dates']:
-                bill_info['due_dates'].append(due_match.group(1))
+            self._append_due_date(bill_info, due_match.group(1))
         
         # 如果没找到，使用通用模式
         if not bill_info['due_dates']:
@@ -485,12 +619,7 @@ class CommBankExtractor(BaseBankExtractor):
                     
                     date_str = date_str.replace('/', '-')
                     
-                    try:
-                        datetime.strptime(date_str, '%Y-%m-%d')
-                        if date_str not in bill_info['due_dates']:
-                            bill_info['due_dates'].append(date_str)
-                    except:
-                        continue
+                    self._append_due_date(bill_info, date_str)
 
 
 class SPDBankExtractor(BaseBankExtractor):
@@ -520,7 +649,7 @@ class SPDBankExtractor(BaseBankExtractor):
                     continue
     
     def extract_due_date(self, full_text, bill_info):
-        """提取浦发银行还款日"""
+        """提取浦发银行还款日（归一化为 ISO，修复 2026/10/22 斜杠脏数据）"""
         due_patterns = [
             r'到期还款日.*?([0-9]{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
             r'还款日.*?([0-9]{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
@@ -530,8 +659,7 @@ class SPDBankExtractor(BaseBankExtractor):
         for pattern in due_patterns:
             matches = re.findall(pattern, full_text, re.DOTALL)
             for match in matches:
-                if match not in bill_info['due_dates']:
-                    bill_info['due_dates'].append(match)
+                self._append_due_date(bill_info, match)
 
 
 class PSBCBankExtractor(BaseBankExtractor):
@@ -560,25 +688,66 @@ class PSBCBankExtractor(BaseBankExtractor):
                     pass
     
     def extract_due_date(self, full_text, bill_info):
-        """提取邮储银行还款日"""
-        due_patterns = [
-            r'到期还款日.*?([0-9]{4}年 [0-9]{1,2}月 [0-9]{1,2}日)',
-            r'还款日.*?([0-9]{4}年 [0-9]{1,2}月 [0-9]{1,2}日)',
-            r'Payment Due Date.*?([0-9]{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
-        ]
-        
-        for pattern in due_patterns:
-            matches = re.findall(pattern, full_text)
-            for match in matches:
-                date_str = match.replace('年', '-').replace('月', '-').replace('日', '')
-                date_str = date_str.replace('/', '-')
-                
+        """提取邮储银行还款日
+
+        兼容两种版式：`2026年11月05日`（无空格，2026-10 实证）与
+        `2026年 11月 05日`（带空格，旧模板）；斜杠日期走 Payment Due Date
+        锚点。先在扁平化文本上锚定（间隔有界），再回退原始 HTML。
+        """
+        soup = BeautifulSoup(full_text, 'html.parser')
+        clean_text = ' '.join(soup.get_text().split())
+
+        # 主模式：到期还款日 + 中文日期（无空格/带空格均可）
+        zh_date = r'(\d{4}年\s*\d{1,2}月\s*\d{1,2}日)'
+        for regex in (
+            r'到期还款日.{0,30}?' + zh_date,
+            r'还款日.{0,30}?' + zh_date,
+        ):
+            m = re.search(regex, clean_text)
+            if m and self._append_due_date(bill_info, m.group(1)):
+                return
+            m = re.search(regex.replace('.{0,30}?', '.{0,300}?'), full_text, re.DOTALL)
+            if m and self._append_due_date(bill_info, m.group(1)):
+                return
+
+        # 备选：Payment Due Date + 斜杠/点分日期（旧版式）
+        for regex in (
+            r'Payment Due Date.{0,300}?(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})',
+            r'到期还款日.{0,300}?(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})',
+        ):
+            m = re.search(regex, clean_text)
+            if not m:
+                m = re.search(regex, full_text, re.DOTALL)
+            if m and self._append_due_date(bill_info, m.group(1)):
+                return
+
+        # 最后回退：通用还款日 + 窗口滤残值，取窗口内最晚日期
+        candidates = []
+        for regex in (
+            r'还款日.{0,300}?(\d{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
+            r'Payment Due Date.{0,300}?(\d{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
+        ):
+            for m in re.finditer(regex, full_text, re.DOTALL):
+                norm = self._norm_date_str(m.group(1))
+                if norm and norm not in candidates:
+                    candidates.append(norm)
+        if not candidates:
+            return
+        email_date = self._email_date(bill_info)
+        if email_date:
+            lo = email_date - timedelta(days=self.DUE_WINDOW_PAST_DAYS)
+            hi = email_date + timedelta(days=self.DUE_WINDOW_FUTURE_DAYS)
+            windowed = []
+            for c in candidates:
                 try:
-                    datetime.strptime(date_str, '%Y-%m-%d')
-                    if date_str not in bill_info['due_dates']:
-                        bill_info['due_dates'].append(date_str)
-                except:
+                    d = datetime.strptime(c, '%Y-%m-%d').date()
+                except Exception:
                     continue
+                if lo <= d <= hi:
+                    windowed.append(c)
+            candidates = windowed
+        if candidates:
+            self._append_due_date(bill_info, max(candidates))
 
 
 class CMBCBankExtractor(BaseBankExtractor):
@@ -637,12 +806,7 @@ class CMBCBankExtractor(BaseBankExtractor):
                 
                 date_str = date_str.replace('/', '-')
                 
-                try:
-                    datetime.strptime(date_str, '%Y-%m-%d')
-                    if date_str not in bill_info['due_dates']:
-                        bill_info['due_dates'].append(date_str)
-                except:
-                    continue
+                self._append_due_date(bill_info, date_str)
 
 
 class CIBBankExtractor(BaseBankExtractor):
@@ -676,7 +840,11 @@ class CIBBankExtractor(BaseBankExtractor):
             except:
                 pass
 
-        amount_match = re.search(r'New Balance.*?RMB\s*([\d,]+\.\d+)', clean_text)
+        # 模式3：New Balance 后 200 字符内的 RMB 金额。
+        # P0-2：原为无界 `.*?` 跨整个扁平化文本，会把交易明细/费用区里的
+        # 第一笔 RMB 金额（如 ¥1.00 手续费/利息）当成本期应还；
+        # 加边界约束后只在摘要区附近取值。
+        amount_match = re.search(r'New Balance.{0,200}?RMB\s*([\d,]+\.\d+)', clean_text)
         if amount_match:
             try:
                 amount = float(amount_match.group(1).replace(',', ''))
@@ -693,16 +861,14 @@ class CIBBankExtractor(BaseBankExtractor):
         due_match = re.search(r'到期还款日\s*Payment Due Date\s*(\d{4})年(\d{1,2})月(\d{1,2})日', clean_text)
         if due_match:
             date_str = f"{due_match.group(1)}-{due_match.group(2).zfill(2)}-{due_match.group(3).zfill(2)}"
-            if date_str not in bill_info['due_dates']:
-                bill_info['due_dates'].append(date_str)
-            return
+            if self._append_due_date(bill_info, date_str):
+                return
 
         due_match = re.search(r'Payment Due Date\s*(\d{4})年(\d{1,2})月(\d{1,2})日', clean_text)
         if due_match:
             date_str = f"{due_match.group(1)}-{due_match.group(2).zfill(2)}-{due_match.group(3).zfill(2)}"
-            if date_str not in bill_info['due_dates']:
-                bill_info['due_dates'].append(date_str)
-            return
+            if self._append_due_date(bill_info, date_str):
+                return
 
         due_patterns = [
             r'到期还款日.*?(\d{4})年(\d{1,2})月(\d{1,2})日',
@@ -712,12 +878,7 @@ class CIBBankExtractor(BaseBankExtractor):
             matches = re.findall(pattern, clean_text)
             for match in matches:
                 date_str = f"{match[0]}-{match[1].zfill(2)}-{match[2].zfill(2)}"
-                try:
-                    datetime.strptime(date_str, '%Y-%m-%d')
-                    if date_str not in bill_info['due_dates']:
-                        bill_info['due_dates'].append(date_str)
-                except:
-                    continue
+                self._append_due_date(bill_info, date_str)
 
 
 class PingAnBankExtractor(BaseBankExtractor):
@@ -767,10 +928,8 @@ class PingAnBankExtractor(BaseBankExtractor):
         
         due_match = re.search(r'本期还款日\s+(\d{4}-\d{2}-\d{2})', clean_text)
         if due_match:
-            date_str = due_match.group(1)
-            if date_str not in bill_info['due_dates']:
-                bill_info['due_dates'].append(date_str)
-            return
+            if self._append_due_date(bill_info, due_match.group(1)):
+                return
         
         due_patterns = [
             r'还款日.*?(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})',
@@ -780,12 +939,7 @@ class PingAnBankExtractor(BaseBankExtractor):
             matches = re.findall(pattern, clean_text)
             for match in matches:
                 date_str = match.replace('/', '-').replace('.', '-')
-                try:
-                    datetime.strptime(date_str, '%Y-%m-%d')
-                    if date_str not in bill_info['due_dates']:
-                        bill_info['due_dates'].append(date_str)
-                except:
-                    continue
+                self._append_due_date(bill_info, date_str)
 
 
 class CEBBankExtractor(BaseBankExtractor):
@@ -845,25 +999,13 @@ class CEBBankExtractor(BaseBankExtractor):
         
         due_match = re.search(r'到期还款日\s*Payment Due Date\s*信用额度.*?(\d{4}/\d{2}/\d{2})\s+(\d{4}/\d{2}/\d{2})', clean_text)
         if due_match:
-            date_str = due_match.group(2).replace('/', '-')
-            try:
-                datetime.strptime(date_str, '%Y-%m-%d')
-                if date_str not in bill_info['due_dates']:
-                    bill_info['due_dates'].append(date_str)
+            if self._append_due_date(bill_info, due_match.group(2)):
                 return
-            except:
-                pass
         
         due_match = re.search(r'Payment Due Date.*?(\d{4}/\d{2}/\d{2})\s+(\d{4}/\d{2}/\d{2})', clean_text)
         if due_match:
-            date_str = due_match.group(2).replace('/', '-')
-            try:
-                datetime.strptime(date_str, '%Y-%m-%d')
-                if date_str not in bill_info['due_dates']:
-                    bill_info['due_dates'].append(date_str)
+            if self._append_due_date(bill_info, due_match.group(2)):
                 return
-            except:
-                pass
         
         due_patterns = [
             r'到期还款日.*?(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})',
@@ -873,12 +1015,7 @@ class CEBBankExtractor(BaseBankExtractor):
             matches = re.findall(pattern, clean_text)
             for match in matches:
                 date_str = match.replace('/', '-').replace('.', '-')
-                try:
-                    datetime.strptime(date_str, '%Y-%m-%d')
-                    if date_str not in bill_info['due_dates']:
-                        bill_info['due_dates'].append(date_str)
-                except:
-                    continue
+                self._append_due_date(bill_info, date_str)
 
 
 class ICBCBankExtractor(BaseBankExtractor):
@@ -986,21 +1123,20 @@ class ICBCBankExtractor(BaseBankExtractor):
             if match:
                 y, m, d = match.group(1), match.group(2).zfill(2), match.group(3).zfill(2)
                 date_str = f"{y}-{m}-{d}"
-                try:
-                    datetime.strptime(date_str, '%Y-%m-%d')
-                    if date_str not in bill_info['due_dates']:
-                        bill_info['due_dates'].append(date_str)
+                if self._append_due_date(bill_info, date_str):
                     return
-                except Exception:
-                    continue
 
 
 class ChangAnBankExtractor(BaseBankExtractor):
     """长安银行提取器
 
-    长安银行账单 HTML 特点：
-    - 本期应还款金额(元) 后跟 9,104.00（千分位逗号）
-    - 到期还款日 后跟 2026/08/15
+    长安银行账单 HTML 特点（2026-10 样本实证）：
+    - 摘要区：本期应还款金额(元) Current Balance 0.00
+    - 到期还款日 Payment Due Date 2026/07/15
+    - Current Balance 为 0.00 是合法结果：表示上期已全额还清、本期无需还款
+      （明细表里的 Opening/Payment 列如 9,104.00 是上期流水，不是本期应还）。
+      旧实现用 `0 < amount` 把 0.00 当提取失败，实际是误判。
+    - Current Balance 为负数时，按邮件自身说明（账户有存款、不需另行还款）记 0.00。
     """
 
     def get_supported_banks(self):
@@ -1010,44 +1146,85 @@ class ChangAnBankExtractor(BaseBankExtractor):
         return full_text.replace('&amp;', '&').replace('&nbsp;', ' ')
 
     def extract_amount(self, full_text, bill_info):
-        """提取金额：本期应还款金额(元) 9,104.00"""
-        # 先把 HTML 标签清理一下，避免标签属性里的数字干扰
-        soup = BeautifulSoup(full_text, 'html.parser')
-        clean_text = soup.get_text()
-        clean_text = ' '.join(clean_text.split())
+        """提取金额：摘要区「本期应还款金额(元) Current Balance X」。
 
-        patterns = [
-            # 本期应还款金额(元) 9,104.00
-            r'本期应还款金额.*?([0-9,]+\.[0-9]{2})',
-            # 本期应还金额 9,104.00（出现在明细表头）
-            r'本期应还金额.*?([0-9,]+\.[0-9]{2})',
-        ]
-        for pattern in patterns:
-            matches = re.findall(pattern, clean_text, re.DOTALL)
-            for match in matches:
-                try:
-                    amount = float(match.replace(',', ''))
-                    if 0 < amount < 1000000:
-                        if not any(a['value'] == amount for a in bill_info['amounts']):
-                            bill_info['amounts'].append({'value': amount, 'currency': 'CNY'})
-                except:
-                    continue
+        取摘要区第一个值（当前余额）；0.00 = 本期无需还款（下游聚合与
+        滴答同步会过滤总额为 0 的账单，不会生成还款任务）。
+        """
+        soup = BeautifulSoup(full_text, 'html.parser')
+        clean_text = ' '.join(soup.get_text().split())
+
+        # 主模式：摘要区 本期应还款金额(元) Current Balance X
+        m = re.search(
+            r'本期应还款金额\s*\(元\)?\s*Current Balance\s*(-?[0-9,]+\.[0-9]{2})',
+            clean_text,
+            re.IGNORECASE
+        )
+        if m:
+            amount = float(m.group(1).replace(',', ''))
+            if amount < 0:
+                amount = 0.0  # 存款余额：邮件明示不需另行还款
+            bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+            return
+
+        # 备选1：不带英文列名的版式，取本期应还款金额后第一个金额
+        m = re.search(r'本期应还款金额.*?([0-9,]+\.[0-9]{2})', clean_text, re.DOTALL)
+        if m:
+            amount = float(m.group(1).replace(',', ''))
+            if 0 <= amount < 1000000:
+                bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                return
+
+        # 备选2：明细表头「本期应还金额」
+        m = re.search(r'本期应还金额.*?([0-9,]+\.[0-9]{2})', clean_text, re.DOTALL)
+        if m:
+            amount = float(m.group(1).replace(',', ''))
+            if 0 <= amount < 1000000:
+                bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
 
     def extract_due_date(self, full_text, bill_info):
-        """提取还款日：到期还款日 2026/08/15"""
+        """提取还款日：到期还款日 Payment Due Date 2026/07/15（归一化为 ISO）"""
         soup = BeautifulSoup(full_text, 'html.parser')
-        clean_text = soup.get_text()
-        clean_text = ' '.join(clean_text.split())
+        clean_text = ' '.join(soup.get_text().split())
 
+        # 锚定模式：摘要区「到期还款日 Payment Due Date」
+        # 先扁平化文本、再原始 HTML（基类 _search_anchored_due_date 处理）
+        anchored_patterns = [
+            r'到期还款日.{0,80}?Payment Due Date.{0,80}?(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})',
+            r'到期还款日.{0,80}?(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})',
+        ]
+        anchored = self._search_anchored_due_date(anchored_patterns, full_text, clean_text)
+        if anchored and self._append_due_date(bill_info, anchored):
+            return
+
+        # 回退：通用模式 + 邮件日窗口滤残值，取窗口内最晚日期
         patterns = [
             r'到期还款日.*?([0-9]{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
             r'还款日.*?([0-9]{4}[-/.][0-9]{1,2}[-/.][0-9]{1,2})',
         ]
+        candidates = []
         for pattern in patterns:
-            matches = re.findall(pattern, clean_text, re.DOTALL)
-            for match in matches:
-                if match not in bill_info['due_dates']:
-                    bill_info['due_dates'].append(match)
+            for match in re.findall(pattern, clean_text, re.DOTALL):
+                norm = self._norm_date_str(match)
+                if norm and norm not in candidates:
+                    candidates.append(norm)
+        if not candidates:
+            return
+        email_date = self._email_date(bill_info)
+        if email_date:
+            lo = email_date - timedelta(days=self.DUE_WINDOW_PAST_DAYS)
+            hi = email_date + timedelta(days=self.DUE_WINDOW_FUTURE_DAYS)
+            windowed = []
+            for c in candidates:
+                try:
+                    d = datetime.strptime(c, '%Y-%m-%d').date()
+                except Exception:
+                    continue
+                if lo <= d <= hi:
+                    windowed.append(c)
+            candidates = windowed
+        if candidates:
+            self._append_due_date(bill_info, max(candidates))
 
 
 class OtherBankExtractor(BaseBankExtractor):
@@ -1101,8 +1278,7 @@ class OtherBankExtractor(BaseBankExtractor):
         for pattern in due_patterns:
             matches = re.findall(pattern, full_text, re.DOTALL)
             for match in matches:
-                if match not in bill_info['due_dates']:
-                    bill_info['due_dates'].append(match)
+                self._append_due_date(bill_info, match)
 
 
 class BankExtractorFactory:
