@@ -88,8 +88,13 @@ class EmailClient:
         
         raise Exception(f"Failed after {max_retries} attempts. Last error: {last_error}")
     
-    def fetch_emails(self, limit=50, folder='INBOX'):
-        """获取邮件列表"""
+    def fetch_emails(self, limit=100, folder='INBOX'):
+        """获取邮件列表
+
+        P0-6：limit 默认 50 → 100。50 封窗口会把跨月账单（如 7 月与 8 月
+        的周期邮件）截掉，与 -3 天宽限形成「双重淘汰」导致漏单；
+        100 封可覆盖两个月的邮件量（实测两邮箱总量均 < 100）。
+        """
         if not self.mail:
             raise Exception("Not connected to email")
         

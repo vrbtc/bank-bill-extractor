@@ -33,25 +33,74 @@ def rotate_log(max_lines=500):
             f.writelines(lines[-max_lines:])
 
 
+def _log_quality_alerts(alerts):
+    """把提取质量告警逐条写进日志（P0-1：失败不再静默）。"""
+    for f in alerts.get('extraction_failures', []):
+        label = f" ({f['label']})" if f.get('label') else ''
+        log(f"ERROR: 待人工提取 - {f['bank']}{label} 「{f['subject']}」 "
+            f"邮件 {f['date']} 还款日 {f['due_dates']} - {f['reason']}")
+    for s in alerts.get('suspicious', []):
+        label = f" ({s['label']})" if s.get('label') else ''
+        log(f"WARN: 疑似误提取 - {s['bank']}{label} 金额 {s['amounts']} - {s['reason']}")
+    for n in alerts.get('needs_review', []):
+        label = f" ({n['label']})" if n.get('label') else ''
+        log(f"WARN: 还款日缺失待确认 - {n['bank']}{label} 金额 {n['amounts']} - {n['reason']}")
+    for e in alerts.get('email_failures', []):
+        log(f"ERROR: 邮箱拉取失败 - {e['email']} ({e.get('label', '')}) - {e['error']}")
+    for u in alerts.get('unrecognized_subjects', []):
+        log(f"WARN: 非已知账单主题（未入链）- {u.get('subject', '')} ({u.get('date', '')})")
+
+
+def _push_quality_alerts(alerts):
+    """cloud 角色：经飞书推送「待人工提取」告警卡片。失败不影响主流程。"""
+    if not (alerts.get('extraction_failures') or alerts.get('suspicious')
+            or alerts.get('needs_review') or alerts.get('email_failures')):
+        return
+    try:
+        from feishu_notify import FeishuNotifier
+        notifier = FeishuNotifier()
+        result = notifier.send_extraction_alerts(
+            failures=alerts.get('extraction_failures'),
+            suspicious=alerts.get('suspicious'),
+            needs_review=alerts.get('needs_review'),
+            email_errors=alerts.get('email_failures'),
+        )
+        if isinstance(result, dict) and result.get('skipped'):
+            log(f"  告警卡片未推送（{result.get('reason', 'skipped')}）")
+        else:
+            log("  OK: 提取告警卡片已推送飞书")
+    except Exception as e:
+        log(f"WARN: 提取告警卡片推送失败 - {e}")
+
+
 def run():
     log("=" * 60)
     log("每日账单自动查询 + 滴答清单同步 开始")
 
     sys.path.insert(0, str(SCRIPT_DIR))
 
+    # 运行角色（P0-7 云端优先）：local 只提取+刷缓存，不写滴答不推飞书
+    from config import get_run_role
+    role = get_run_role()
+    log(f"运行角色: {role}")
+
     # 供结束时写 run_summary 日志（留存到 GitHub）
     bills_count = 0
     upcoming_total = 0.0
     sync_created = None
     sync_updated = None
+    alerts = {}
 
     # Step 1: 刷新账单
     log("Step 1: 从邮箱获取最新账单...")
     try:
-        from this_month_bills import BillExtractor, get_upcoming_bills
+        from this_month_bills import (
+            BillExtractor, get_upcoming_bills, get_overdue_bills,
+            collect_quality_alerts,
+        )
 
         extractor = BillExtractor()
-        bills = extractor.fetch_and_extract(limit=50)
+        bills = extractor.fetch_and_extract(limit=100)
 
         if bills is None:
             log("ERROR: 无法获取账单数据")
@@ -67,6 +116,29 @@ def run():
             "bills": bills,
         }
 
+        # 提取质量告警（P0-1/P0-2/P0-3/P0-4）：失败/可疑/待确认/邮箱故障
+        alerts = collect_quality_alerts(
+            bills,
+            email_failures=extractor.email_failures,
+            unrecognized=extractor.unrecognized_subjects,
+        )
+        data_to_save["extraction_alerts"] = alerts
+        _log_quality_alerts(alerts)
+
+        # 超过宽限期未确认账单（P0-6）：报表可见，需人工核实是否已还
+        overdue = get_overdue_bills(bills)
+        overdue_rows = [(k, i) for k, i in overdue.items()
+                        if i["total_amount"] > 0 and i.get("earliest_due_date")]
+        if overdue_rows:
+            overdue_rows.sort(key=lambda x: x[1]["earliest_due_date"]["days_until"])
+            log(f"WARN: {len(overdue_rows)} 组账单超过 3 天宽限期未确认"
+                f"（合计 ¥{sum(i['total_amount'] for _, i in overdue_rows):,.2f}，需人工核实是否已还）：")
+            for _, info in overdue_rows:
+                label = f" ({info['source_label']})" if info['source_label'] else ''
+                log(f"  OVERDUE: {info['bank_name']}{label} "
+                    f"¥{info['total_amount']:,.2f} 还款日 {info['earliest_due_date']['date']}"
+                    f"（已超期 {-info['earliest_due_date']['days_until']} 天）")
+
         data_file = SCRIPT_DIR / "this_month_bills.json"
         with open(data_file, "w", encoding="utf-8") as f:
             json.dump(data_to_save, f, ensure_ascii=False, indent=2)
@@ -79,7 +151,7 @@ def run():
         traceback.print_exc()
         return False
 
-    # Step 2: 检查紧急账单
+    # Step 2: 检查紧急账单（只读缓存，两个角色都执行）
     log("Step 2: 检查紧急账单...")
     try:
         from bill_skill import BillSkill
@@ -96,6 +168,13 @@ def run():
             log("  OK: 无紧急账单")
     except Exception as e:
         log(f"WARN: 紧急检查失败 - {e}")
+
+    if role != 'cloud':
+        # P0-7：local 角色不写滴答、不推飞书（云端优先，避免双写重建已还任务）
+        log("Step 3/4: local 角色跳过滴答同步与飞书推送（云端优先，由 deploy.yml 负责）")
+        log("  提取告警已写入日志，待云端运行推送飞书卡片")
+        _finish(bills_count, upcoming_total, sync_created, sync_updated, alerts)
+        return True
 
     # Step 3: 同步到滴答清单
     log("Step 3: 同步到滴答清单...")
@@ -145,18 +224,30 @@ def run():
         log(f"WARN: 飞书推送失败 - {e}")
         traceback.print_exc()
 
+    # Step 5: 提取质量告警卡片（P0-1：待人工提取/疑似误提取/还款日缺失/邮箱故障）
+    log("Step 5: 推送提取质量告警...")
+    _push_quality_alerts(alerts)
+
     log("每日账单自动查询 + 滴答清单同步 完成")
     log("=" * 60)
 
-    # 运行摘要留存到 run_log.jsonl（由 auto-sync 自动推送 GitHub）
+    _finish(bills_count, upcoming_total, sync_created, sync_updated, alerts)
+    return True
+
+
+def _finish(bills_count, upcoming_total, sync_created, sync_updated, alerts):
+    """运行摘要留存到 run_log.jsonl（由 auto-sync 自动推送 GitHub）"""
     try:
         from run_logger import log_event
         log_event("run_summary", runner="daily_run",
                   bills=bills_count, upcoming_total=upcoming_total,
-                  sync_created=sync_created, sync_updated=sync_updated)
+                  sync_created=sync_created, sync_updated=sync_updated,
+                  extract_failures=len(alerts.get("extraction_failures", [])),
+                  suspicious=len(alerts.get("suspicious", [])),
+                  needs_review=len(alerts.get("needs_review", [])),
+                  email_failures=len(alerts.get("email_failures", [])))
     except Exception:
         pass
-    return True
 
 
 if __name__ == "__main__":

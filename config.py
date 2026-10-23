@@ -93,3 +93,23 @@ def get_all_emails():
             em['imap_port'] = int(em['imap_port'])
 
     return emails
+
+
+def get_run_role():
+    """获取运行角色（P0-7 双实例状态竞争修复，云端优先架构）。
+
+    - `cloud`：全流程（提取 → 滴答同步 → 飞书推送 → 仪表盘 → 状态文件
+      commit 回 main）。GitHub Actions 显式设置 RUN_ROLE=cloud。
+    - `local`：只做提取 + 刷新本地缓存/仪表盘；不写滴答、不推飞书
+      （避免双写重建已还任务/重复打扰）；不推送滴答状态文件。
+
+    优先级：环境变量 RUN_ROLE > config.json 的 run_role >
+    GITHUB_ACTIONS 环境推断（云端默认 cloud，本地默认 local）。
+
+    Returns:
+        str: 'cloud' 或 'local'
+    """
+    role = (os.environ.get('RUN_ROLE') or _config.get('run_role') or '').strip().lower()
+    if role in ('cloud', 'local'):
+        return role
+    return 'cloud' if os.environ.get('GITHUB_ACTIONS') == 'true' else 'local'

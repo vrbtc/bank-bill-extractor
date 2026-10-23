@@ -11,12 +11,60 @@ BJ_TZ = timezone(timedelta(hours=8))
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from this_month_bills import BillExtractor, get_upcoming_bills
+from this_month_bills import (
+    BillExtractor, get_upcoming_bills, get_overdue_bills,
+    collect_quality_alerts,
+)
+
+
+def _log_quality_alerts(alerts):
+    """提取质量告警写日志（P0-1：失败不再静默，ERROR 级别）。"""
+    for f in alerts.get('extraction_failures', []):
+        label = f" ({f['label']})" if f.get('label') else ''
+        print(f"ERROR: 待人工提取 - {f['bank']}{label} 「{f['subject']}」 "
+              f"邮件 {f['date']} 还款日 {f['due_dates']} - {f['reason']}")
+    for s in alerts.get('suspicious', []):
+        label = f" ({s['label']})" if s.get('label') else ''
+        print(f"WARN: 疑似误提取 - {s['bank']}{label} 金额 {s['amounts']} - {s['reason']}")
+    for n in alerts.get('needs_review', []):
+        label = f" ({n['label']})" if n.get('label') else ''
+        print(f"WARN: 还款日缺失待确认 - {n['bank']}{label} 金额 {n['amounts']} - {n['reason']}")
+    for e in alerts.get('email_failures', []):
+        print(f"ERROR: 邮箱拉取失败 - {e['email']} ({e.get('label', '')}) - {e['error']}")
+    for u in alerts.get('unrecognized_subjects', []):
+        print(f"WARN: 非已知账单主题（未入链）- {u.get('subject', '')} ({u.get('date', '')})")
+
+
+def _push_quality_alerts(alerts):
+    """cloud 角色：经飞书推送「待人工提取」告警卡片。失败不影响仪表盘生成。"""
+    if not (alerts.get('extraction_failures') or alerts.get('suspicious')
+            or alerts.get('needs_review') or alerts.get('email_failures')):
+        return
+    try:
+        from feishu_notify import FeishuNotifier
+        notifier = FeishuNotifier()
+        result = notifier.send_extraction_alerts(
+            failures=alerts.get('extraction_failures'),
+            suspicious=alerts.get('suspicious'),
+            needs_review=alerts.get('needs_review'),
+            email_errors=alerts.get('email_failures'),
+        )
+        if isinstance(result, dict) and result.get('skipped'):
+            print(f"Extraction alert card skipped: {result.get('reason', 'skipped')}")
+        else:
+            print("Extraction alert card pushed to Feishu")
+    except Exception as e:
+        print(f'Extraction alert push warning: {e}')
 
 
 def generate_dashboard():
     output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'gh-pages')
     os.makedirs(output_dir, exist_ok=True)
+
+    # 运行角色（P0-7 云端优先）：local 只提取+刷仪表盘，不写滴答不推飞书
+    from config import get_run_role
+    role = get_run_role()
+    print(f'Run role: {role}')
 
     print('Connecting to email and extracting bills...')
     extractor = BillExtractor()
@@ -30,19 +78,36 @@ def generate_dashboard():
         bills = []
         extract_error = str(e)
 
+    # 提取质量告警（P0-1/P0-2/P0-3/P0-4）
+    from this_month_bills import collect_quality_alerts
+    alerts = collect_quality_alerts(
+        bills,
+        email_failures=getattr(extractor, 'email_failures', []),
+        unrecognized=getattr(extractor, 'unrecognized_subjects', []),
+    )
+    _log_quality_alerts(alerts)
+
     # Sync to TickTick (optional, won't fail the build if errors occur)
-    if bills and not extract_error:
+    # 仅 cloud 角色执行：local 不写滴答，避免双实例双写重建已还任务
+    if bills and not extract_error and role == 'cloud':
         try:
             sync_to_ticktick(bills)
         except Exception as e:
             print(f'TickTick sync warning: {e}')
+    elif role != 'cloud':
+        print('TickTick sync skipped (local role, cloud-first)')
 
     # Push today's all TickTick tasks to Feishu group (optional, won't fail the build if errors occur)
     # 注意：现在推送的是今日所有代办（从 TickTick 拉取），不再依赖账单数据
-    try:
-        push_to_feishu()
-    except Exception as e:
-        print(f'Feishu push warning: {e}')
+    # 仅 cloud 角色推送；告警卡片同样只由云端推送
+    if role == 'cloud':
+        try:
+            push_to_feishu()
+        except Exception as e:
+            print(f'Feishu push warning: {e}')
+        _push_quality_alerts(alerts)
+    else:
+        print('Feishu push skipped (local role, cloud-first); alerts logged only')
 
     now = datetime.now(BJ_TZ)  # 北京时间，避免 runner UTC
     all_upcoming = get_upcoming_bills(bills, days=None)
@@ -54,6 +119,7 @@ def generate_dashboard():
     # 调用 TickTick API 拉取"信用卡还款"项目所有未完成任务标题，
     # 凡是 bills 里有但 TickTick 里没有对应任务的银行 = 用户已完成 → 从仪表盘移除
     # 云端 runner 没有 completed_titles.json，这是唯一能让云端感知完成状态的方式
+    active_titles = set()
     try:
         active_titles = _get_active_ticktick_titles()
         if active_titles:
@@ -66,6 +132,39 @@ def generate_dashboard():
                 print(f"Filtered {len(completed)} completed banks from dashboard: {completed}")
     except Exception as e:
         print(f"TickTick completed-filter warning: {e}")
+
+    # 超过宽限期未确认账单（P0-6）：此前被 -3 天宽限从所有报表隐藏，
+    # 导致「是否已还」无任何账单级状态可答。滴答侧本就保留逾期任务直到
+    # 勾选，这里与活跃任务交叉后展示「仍开着未确认」的账单。
+    # 注意：完成过滤只在 cloud 角色生效——cloud 已先执行 sync_to_ticktick，
+    # 任务存在性才有「未确认」语义；local 未同步，不过滤，展示全部逾期组。
+    overdue_unconfirmed = []
+    try:
+        overdue_all = get_overdue_bills(bills, grace_days=3)
+        if active_titles and role == 'cloud':
+            _filter_completed_banks(overdue_all, active_titles)
+        for bank_key, info in sorted(
+            overdue_all.items(),
+            key=lambda x: x[1]['earliest_due_date']['days_until'] if x[1]['earliest_due_date'] else 999
+        ):
+            if info['total_amount'] > 0 and info['earliest_due_date']:
+                days = info['earliest_due_date']['days_until']
+                bank_name = info.get('bank_name', bank_key.split('|')[0] if '|' in bank_key else bank_key)
+                source_label = info.get('source_label', '')
+                sub_account = info.get('sub_account', '')
+                base_name = f"{bank_name}({sub_account})" if sub_account else bank_name
+                display_name = f"{base_name} ({source_label})" if source_label else base_name
+                overdue_unconfirmed.append({
+                    'bank': display_name,
+                    'amount': info['total_amount'],
+                    'due_date': info['earliest_due_date']['date'],
+                    'days_until': days,
+                    'overdue_days': -days,
+                })
+        if overdue_unconfirmed:
+            print(f"Overdue unconfirmed (beyond grace): {len(overdue_unconfirmed)} groups")
+    except Exception as e:
+        print(f"Overdue-unconfirmed warning: {e}")
 
     total_all = sum(info['total_amount'] for info in all_upcoming.values() if info['total_amount'] > 0)
     total_15 = sum(info['total_amount'] for info in upcoming_15.values() if info['total_amount'] > 0)
@@ -169,7 +268,14 @@ def generate_dashboard():
         'bills_count': len(bills),
         'urgent_bills': urgent_bills,
         'all_bills': all_bills_data,
-        'extract_error': extract_error
+        'overdue_unconfirmed': overdue_unconfirmed,
+        'extract_error': extract_error,
+        'extraction_alerts': {
+            'extraction_failures': len(alerts.get('extraction_failures', [])),
+            'suspicious': len(alerts.get('suspicious', [])),
+            'needs_review': len(alerts.get('needs_review', [])),
+            'email_failures': len(alerts.get('email_failures', [])),
+        },
     }
 
     data_json = json.dumps(data, ensure_ascii=False)
@@ -455,6 +561,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Ping
   <div class="stats-grid" id="statsGrid"></div>
   <div class="section-title"><span class="dot"></span>近期待还款（15天内）</div>
   <div class="bills-list" id="urgentList"></div>
+  <div class="section-title"><span class="dot" style="background:#f59e0b"></span>超过宽限期未确认（需人工核实是否已还）</div>
+  <div class="bills-list" id="overdueList"></div>
   <div class="section-title"><span class="dot" style="background:#475569"></span>全部待还款账单</div>
   <div class="bills-list" id="allList"></div>
   <div class="footer">银行账单自动提取系统 &middot; 数据仅供参考，请以实际账单为准</div>
@@ -469,6 +577,8 @@ function render() {
 
   if (DATA.extract_error) {
     document.getElementById("errorBanner").innerHTML = '<div class="error-banner">\u26A0\uFE0F 上次提取出现错误：' + DATA.extract_error + '</div>';
+  } else if (DATA.extraction_alerts && DATA.extraction_alerts.extraction_failures > 0) {
+    document.getElementById("errorBanner").innerHTML = '<div class="error-banner">\u26A0\uFE0F 有 ' + DATA.extraction_alerts.extraction_failures + ' 封账单邮件金额提取失败，待人工提取（告警已推送到飞书）</div>';
   }
 
   const stats = [
@@ -495,6 +605,16 @@ function render() {
     urgentList.innerHTML = '<div class="empty-state"><div class="icon">&#x1F389;</div><div>15天内没有待还款账单</div></div>';
   } else {
     urgentList.innerHTML = DATA.urgent_bills.map(billCard).join("");
+  }
+
+  var overdueList = document.getElementById("overdueList");
+  if (DATA.overdue_unconfirmed && DATA.overdue_unconfirmed.length > 0) {
+    overdueList.innerHTML = DATA.overdue_unconfirmed.map(function(b) {
+      var daysText = "已逾期 " + b.overdue_days + " 天";
+      return '<div class="bill-card status-warning"><div class="bill-left"><div class="bank-icon">' + b.bank.charAt(0) + '</div><div class="bill-info"><div class="bank-name">' + b.bank + ' <span class="badge warning">待核实</span></div><div class="due-date">到期日：' + b.due_date + '</div></div></div><div class="bill-right"><div class="bill-amount">' + fmt(b.amount) + '</div><div class="bill-days warning">' + daysText + '</div></div></div>';
+    }).join("");
+  } else {
+    overdueList.innerHTML = '<div class="empty-state"><div class="icon">&#x2705;</div><div>无超过宽限期未确认账单</div></div>';
   }
 
   var allList = document.getElementById("allList");
