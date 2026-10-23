@@ -1,31 +1,9 @@
 {
-  "last_sync": "2026-10-23 13:42:48",
-  "created_count": 1,
+  "last_sync": "2026-10-23 15:25:08",
+  "created_count": 0,
   "skipped_count": 0,
-  "created_tasks": [
-    {
-      "bank": "建设银行",
-      "task_id": "6adb6455e4b012783245316e",
-      "title": "💳 建行 23.96 元 (YY)"
-    }
-  ],
+  "created_tasks": [],
   "last_seen_titles": {
-    "💳 建行 23.96 元 (YY)": {
-      "bank_name": "建设银行",
-      "abbr": "建行",
-      "label": "YY",
-      "sub_account": "",
-      "total_amount": 23.96,
-      "due_date": "2026-09-07",
-      "details": [
-        {
-          "subject": "中国建设银行信用卡电子账单",
-          "amount": 23.96,
-          "due_date": "2026-09-07",
-          "days_until": -46
-        }
-      ]
-    },
     "💳 邮储 10678.59 元": {
       "bank_name": "邮储银行",
       "abbr": "邮储",
