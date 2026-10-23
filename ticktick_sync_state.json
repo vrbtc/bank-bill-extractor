@@ -1,5 +1,5 @@
 {
-  "last_sync": "2026-10-23 15:25:08",
+  "last_sync": "2026-10-23 18:12:44",
   "created_count": 0,
   "skipped_count": 0,
   "created_tasks": [],
@@ -16,7 +16,7 @@
           "subject": "邮储银行信用卡电子账单",
           "amount": 10678.59,
           "due_date": "2026-10-26",
-          "days_until": 3
+          "days_until": 2
         }
       ]
     },
@@ -32,7 +32,7 @@
           "subject": "兴业银行信用卡2026年10月电子账单",
           "amount": 17523.23,
           "due_date": "2026-10-30",
-          "days_until": 7
+          "days_until": 6
         }
       ]
     },
@@ -48,7 +48,7 @@
           "subject": "光大信用卡电子账单",
           "amount": 34400.25,
           "due_date": "2026-10-31",
-          "days_until": 8
+          "days_until": 7
         }
       ]
     },
@@ -64,7 +64,7 @@
           "subject": "平安信用卡电子账单",
           "amount": 5093.13,
           "due_date": "2026-11-01",
-          "days_until": 9
+          "days_until": 8
         }
       ]
     },
@@ -80,7 +80,7 @@
           "subject": "邮储银行信用卡电子账单",
           "amount": 2269.58,
           "due_date": "2026-11-05",
-          "days_until": 13
+          "days_until": 12
         }
       ]
     },
@@ -96,7 +96,7 @@
           "subject": "招商银行分期信用卡电子账单",
           "amount": 2986.72,
           "due_date": "2026-11-06",
-          "days_until": 14
+          "days_until": 13
         }
       ]
     },
@@ -112,7 +112,7 @@
           "subject": "招商银行信用卡电子账单",
           "amount": 8462.3,
           "due_date": "2026-11-06",
-          "days_until": 14
+          "days_until": 13
         }
       ]
     },
@@ -128,7 +128,7 @@
           "subject": "广发信用卡 2026年10月电子账单",
           "amount": 130.3,
           "due_date": "2026-11-06",
-          "days_until": 14
+          "days_until": 13
         }
       ]
     },
@@ -144,7 +144,7 @@
           "subject": "平安信用卡电子账单",
           "amount": 246.7,
           "due_date": "2026-11-07",
-          "days_until": 15
+          "days_until": 14
         }
       ]
     },
@@ -160,7 +160,7 @@
           "subject": "交通银行白金信用卡2026年10月电子账单",
           "amount": 54762.78,
           "due_date": "2026-11-15",
-          "days_until": 23
+          "days_until": 22
         }
       ]
     }
