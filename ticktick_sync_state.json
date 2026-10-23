@@ -1,22 +1,44 @@
 {
-  "last_sync": "2026-10-23 12:58:32",
-  "created_count": 0,
+  "last_sync": "2026-10-23 13:42:48",
+  "created_count": 1,
   "skipped_count": 0,
-  "created_tasks": [],
+  "created_tasks": [
+    {
+      "bank": "建设银行",
+      "task_id": "6adb6455e4b012783245316e",
+      "title": "💳 建行 23.96 元 (YY)"
+    }
+  ],
   "last_seen_titles": {
+    "💳 建行 23.96 元 (YY)": {
+      "bank_name": "建设银行",
+      "abbr": "建行",
+      "label": "YY",
+      "sub_account": "",
+      "total_amount": 23.96,
+      "due_date": "2026-09-07",
+      "details": [
+        {
+          "subject": "中国建设银行信用卡电子账单",
+          "amount": 23.96,
+          "due_date": "2026-09-07",
+          "days_until": -46
+        }
+      ]
+    },
     "💳 邮储 10678.59 元": {
       "bank_name": "邮储银行",
       "abbr": "邮储",
       "label": "",
       "sub_account": "",
       "total_amount": 10678.59,
-      "due_date": "2026-10-27",
+      "due_date": "2026-10-26",
       "details": [
         {
           "subject": "邮储银行信用卡电子账单",
           "amount": 10678.59,
-          "due_date": "2026-10-27",
-          "days_until": 4
+          "due_date": "2026-10-26",
+          "days_until": 3
         }
       ]
     },
@@ -68,6 +90,22 @@
         }
       ]
     },
+    "💳 邮储 2269.58 元": {
+      "bank_name": "邮储银行",
+      "abbr": "邮储",
+      "label": "",
+      "sub_account": "",
+      "total_amount": 2269.58,
+      "due_date": "2026-11-05",
+      "details": [
+        {
+          "subject": "邮储银行信用卡电子账单",
+          "amount": 2269.58,
+          "due_date": "2026-11-05",
+          "days_until": 13
+        }
+      ]
+    },
     "💳 招行分期卡 2986.72 元": {
       "bank_name": "招商银行",
       "abbr": "招行",
@@ -111,22 +149,6 @@
         {
           "subject": "广发信用卡 2026年10月电子账单",
           "amount": 130.3,
-          "due_date": "2026-11-06",
-          "days_until": 14
-        }
-      ]
-    },
-    "💳 邮储 2269.58 元": {
-      "bank_name": "邮储银行",
-      "abbr": "邮储",
-      "label": "",
-      "sub_account": "",
-      "total_amount": 2269.58,
-      "due_date": "2026-11-06",
-      "details": [
-        {
-          "subject": "邮储银行信用卡电子账单",
-          "amount": 2269.58,
           "due_date": "2026-11-06",
           "days_until": 14
         }
