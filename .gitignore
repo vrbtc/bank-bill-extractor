@@ -66,6 +66,12 @@ credentials.json
 # Trae IDE
 .trae/
 
+# 主理人审计目录（勿入库）
+.workbuddy/
+
+# 失败邮件样本（只存邮件内容、不含凭据，但含金额信息，勿入库）
+samples/
+
 # Data files (bills, reports, logs)
 bill_data_history.json
 bill_report*.json

@@ -1,10 +1,13 @@
-name: 账单自动提取
+name: 账单自动提取（已停用调度）
 
+# 2026-10-23 评估结论（P0-7/J）：本 workflow 与 deploy.yml 功能重叠——
+#   - 旧引擎 ci_extract.py 只抓阿里云单邮箱，写 docs/bills.json；
+#   - deploy.yml 的新引擎（generate_dashboard.py）已全量覆盖双邮箱 +
+#     滴答同步 + 飞书 + 仪表盘，每天 4 次运行。
+# docs/bills.json 无实际消费方（前端用 gh-pages/data.json；
+# feishu_notify.py --push 仅作为历史回退候选，不在活路径）。
+# 决策：禁用定时调度，仅保留手动触发（workflow_dispatch）供应急使用。
 on:
-  # 定时触发：每天北京时间 9:00（UTC 1:00）
-  schedule:
-    - cron: '0 1 * * *'
-  # 手动触发
   workflow_dispatch:
 
 permissions:

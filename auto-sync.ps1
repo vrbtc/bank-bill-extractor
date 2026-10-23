@@ -89,8 +89,11 @@ if (-not $hasUpstream) {
 }
 
 # --- 提交变更 ---
+# P0-7 双实例状态竞争修复（云端优先）：滴答状态文件归云端所有，
+# 本地 auto-sync 只提交 run_log.jsonl 等本地产物，绝不提交/覆盖滴答状态文件，
+# 避免本地运行覆盖云端回传的完成检测基准（重建已还任务）。
 if ($dirty) {
-    git add -A 2>&1 | Out-Null
+    git add -A -- . ":(exclude)ticktick_sync_state.json" ":(exclude)ticktick_completed_titles.json" ":(exclude)ticktick_completed_amounts.json" 2>&1 | Out-Null
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $fileCount = ($dirty | Measure-Object).Count
     git commit -m "Auto-sync: $timestamp ($fileCount files)" 2>&1 | Out-Null

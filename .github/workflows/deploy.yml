@@ -50,6 +50,8 @@ jobs:
 
       - name: Generate dashboard
         env:
+          # P0-7 云端优先：显式声明 cloud 角色（全流程：提取→滴答同步→飞书→仪表盘→状态回传）
+          RUN_ROLE: cloud
           # 多邮箱配置：JSON 字符串，每个邮箱可配置 label（如 YY）
           # 格式: [{"address":"...","password":"...","imap_server":"...","imap_port":993,"label":"YY"}]
           # 如果未配置 EMAILS_JSON，会回退到 EMAIL_ADDRESS/EMAIL_PASSWORD 单邮箱模式
