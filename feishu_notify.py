@@ -16,10 +16,37 @@
 
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import requests
+
+# 逾期推送分级阈值（2026-10-27 用户要求）：过期超过该天数的旧任务
+# 不再逐条提醒，只汇总一行数量——过期一两个月的旧账天天刷屏没有行动价值。
+# 近期逾期（≤ 该天数）照常逐条提醒。任务本身不从滴答删除，仅影响推送展示。
+OVERDUE_NOTIFY_MAX_DAYS = 7
+
+
+def split_overdue(tasks, today_str, max_days=None):
+    """把逾期任务切成 (recent, older) 两段。
+
+    recent: 过期 ≤ max_days 天（照常逐条提醒）
+    older:  过期 >  max_days 天（折叠为汇总行）
+    无法解析日期的任务按 0 天处理（归入 recent，宁多勿漏）。
+    """
+    max_days = OVERDUE_NOTIFY_MAX_DAYS if max_days is None else max_days
+    try:
+        today_d = datetime.strptime(today_str, "%Y-%m-%d").date()
+    except Exception:
+        return list(tasks), []
+    recent, older = [], []
+    for t in tasks:
+        try:
+            days = (today_d - datetime.strptime(t["due_date_bj"], "%Y-%m-%d").date()).days
+        except Exception:
+            days = 0
+        (recent if days <= max_days else older).append(t)
+    return recent, older
 
 
 class FeishuNotifier:
@@ -370,12 +397,18 @@ class FeishuNotifier:
             }
         }, {"tag": "hr"}]
 
-        # 逾期未完成
+        # 逾期未完成（分级：过期 ≤ OVERDUE_NOTIFY_MAX_DAYS 逐条提醒，
+        # 更老的折叠为一行汇总——2026-10-27 用户要求过期旧账不再天天刷屏）
         if overdue:
-            lines = [f"**🔴 逾期未完成（{len(overdue)} 项）**"]
-            for t in overdue:
+            recent, older = split_overdue(overdue, today_str)
+            lines = [f"**🔴 逾期未完成（{len(recent)} 项）**"]
+            for t in recent:
                 p_mark = {"5": "🔥", "3": "⚠️", "1": "📝"}.get(str(t["priority"]), "")
                 lines.append(f"• {p_mark} {t['title']}（{t['project_name']}，应于 {t['due_date_bj']}）")
+            if older:
+                lines.append(
+                    f"• 📦 另有 {len(older)} 项过期超过 {OVERDUE_NOTIFY_MAX_DAYS} 天的旧任务，已折叠不再逐条提醒"
+                )
             elements.append({"tag": "div", "text": {"tag": "lark_md", "content": "\n".join(lines)}})
 
         # 按天分组（今天、明天、后天...）
@@ -392,12 +425,17 @@ class FeishuNotifier:
         # 汇总
         today_count = len(by_offset.get(0, []))
         upcoming_count = sum(len(v) for k, v in by_offset.items() if k > 0)
+        overdue_label = f"逾期 {len(overdue)}"
+        if overdue:
+            _, older_cnt = split_overdue(overdue, today_str)
+            if older_cnt:
+                overdue_label += f"（{len(older_cnt)} 项超 {OVERDUE_NOTIFY_MAX_DAYS} 天已折叠）"
         elements.append({"tag": "hr"})
         elements.append({
             "tag": "div",
             "text": {
                 "tag": "lark_md",
-                "content": f"**共 {len(tasks)} 项待办**（逾期 {len(overdue)}，今日 {today_count}，未来 {upcoming_count}）\n更新时间：{today_str}"
+                "content": f"**共 {len(tasks)} 项待办**（{overdue_label}，今日 {today_count}，未来 {upcoming_count}）\n更新时间：{today_str}"
             }
         })
 

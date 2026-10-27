@@ -334,10 +334,10 @@ class BillExtractor:
                         })
                         continue
                     print(f"[{idx}] {subject}")
-                    bills = self.extract_from_html(html_body, subject, date, msg=msg)
-                    # 给每个账单打上 source_label
+                    bills = self.extract_from_html(html_body, subject, date, msg=msg,
+                                                   source_label=em_cfg.get('label', ''))
+                    # 补齐 source_email（source_label 已在提取阶段写入）
                     for bill in bills:
-                        bill['source_label'] = em_cfg.get('label', '')
                         bill['source_email'] = em_cfg['address']
                     bills_from_this.extend(bills)
             
@@ -387,7 +387,7 @@ class BillExtractor:
                 return value
         return None
     
-    def extract_from_html(self, html_content, subject, date, msg=None):
+    def extract_from_html(self, html_content, subject, date, msg=None, source_label=None):
         """从 HTML 中提取账单信息
 
         Args:
@@ -421,7 +421,12 @@ class BillExtractor:
             'statement_dates': [],
             'statement_day': None,
             'credit_limit': None,
-            'bank_name': bank_name
+            'bank_name': bank_name,
+            # 提取阶段即带上邮箱标签（主邮箱 ''，QQ 子账号 'YY'）：
+            # P0-2 确认机制的四元组匹配（bank+label+amount+due_date）在
+            # check_reasonableness（下方闸门）执行时就需要 label，
+            # 不能等 _fetch_from_one_email 批量补——晚于闸门就永远匹配不上
+            'source_label': str(source_label or ''),
         }
         
         extractor.extract_amount(full_text, bill_info)

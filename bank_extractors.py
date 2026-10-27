@@ -5,11 +5,69 @@
 包含银行提取器基类和具体银行实现
 """
 
+import json
 import re
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from email.utils import parsedate_tz
+from pathlib import Path
+
 from bs4 import BeautifulSoup
+
+# 用户已确认的真实小额账单清单（P0-2 静默白名单，2026-10-27 新增）。
+# 四元组：银行 + 邮箱标签 + 金额 + 还款日。命中清单的账单不再标「疑似误提取」。
+# 文件由用户人工维护（初始 4 笔经用户 2026-10-27 逐笔确认写入）；
+# 缺失/损坏时静默降级为空清单，闸门照常工作。
+CONFIRMED_AMOUNTS_FILE = Path(__file__).resolve().parent / "ticktick_confirmed_amounts.json"
+_CONFIRMED_CACHE = {"mtime": None, "items": []}
+
+
+def _norm_date_key(value):
+    """日期键归一化：统一 / 为 -，去空白（清单与缓存格式可能不同）。"""
+    return str(value or "").replace("/", "-").strip()
+
+
+def load_confirmed_amounts(force=False):
+    """读取已确认小额账单清单，带 mtime 缓存；返回 list[dict]。"""
+    try:
+        mtime = CONFIRMED_AMOUNTS_FILE.stat().st_mtime
+    except OSError:
+        _CONFIRMED_CACHE.update(mtime=None, items=[])
+        return []
+    if not force and _CONFIRMED_CACHE["mtime"] == mtime:
+        return _CONFIRMED_CACHE["items"]
+    items = []
+    try:
+        data = json.loads(CONFIRMED_AMOUNTS_FILE.read_text(encoding="utf-8"))
+        for row in data.get("confirmed", []):
+            try:
+                items.append({
+                    "bank": str(row.get("bank", "")).strip(),
+                    "label": str(row.get("label") or "").strip(),
+                    "amount": round(float(row.get("amount", 0)), 2),
+                    "due_date": _norm_date_key(row.get("due_date")),
+                })
+            except Exception:
+                continue
+    except Exception:
+        items = []
+    _CONFIRMED_CACHE.update(mtime=mtime, items=items)
+    return items
+
+
+def is_confirmed_amount(bank, label, amount, due_date):
+    """四元组精确匹配（金额按分取整、日期归一化 / 与 -）。"""
+    try:
+        amt = round(float(amount), 2)
+    except Exception:
+        return False
+    key = {
+        "bank": str(bank or "").strip(),
+        "label": str(label or "").strip(),
+        "amount": amt,
+        "due_date": _norm_date_key(due_date),
+    }
+    return key in load_confirmed_amounts()
 
 
 class BaseBankExtractor(ABC):
@@ -161,6 +219,14 @@ class BaseBankExtractor(ABC):
         for amount_info in bill_info.get('amounts', []):
             value = amount_info.get('value', 0) or 0
             if 0 < value < limit * self.SUSPICIOUS_RATIO:
+                if is_confirmed_amount(bill_info.get('bank_name', ''),
+                                       bill_info.get('source_label', ''),
+                                       value,
+                                       (bill_info.get('due_dates') or [''])[0]):
+                    # 用户已逐笔确认为真实账单（ticktick_confirmed_amounts.json），
+                    # 不再标「疑似误提取」——2026-10-27 用户明确要求：
+                    # 提取正确且经确认的账单不得反复告警
+                    continue
                 bill_info['suspicious'] = True
                 match_src = amount_info.get('match')
                 if match_src:

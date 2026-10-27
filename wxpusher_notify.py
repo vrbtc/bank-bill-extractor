@@ -39,6 +39,9 @@ from pathlib import Path
 
 import requests
 
+# 逾期推送分级：与飞书同一规则（过期 > 7 天的旧任务折叠为汇总行，不逐条提醒）
+from feishu_notify import OVERDUE_NOTIFY_MAX_DAYS, split_overdue
+
 API_URL = "https://wxpusher.zjiecode.com/api/send/message"
 
 # 北京时区（UTC+8）
@@ -201,10 +204,15 @@ class WXPusherNotifier:
         lines = [f"📅 {title_label}（{today_str} 北京时间）", ""]
 
         if overdue:
-            lines.append(f"🔴 逾期未完成（{len(overdue)} 项）")
-            for t in overdue:
+            recent, older = split_overdue(overdue, today_str)
+            lines.append(f"🔴 逾期未完成（{len(recent)} 项）")
+            for t in recent:
                 p_mark = {"5": "🔥", "3": "⚠️", "1": "📝"}.get(str(t["priority"]), "")
                 lines.append(f"• {p_mark} {t['title']}（{t['project_name']}，应于 {t['due_date_bj']}）")
+            if older:
+                lines.append(
+                    f"• 📦 另有 {len(older)} 项过期超过 {OVERDUE_NOTIFY_MAX_DAYS} 天的旧任务，已折叠不再逐条提醒"
+                )
             lines.append("")
 
         for offset in sorted(by_offset.keys()):
@@ -218,7 +226,12 @@ class WXPusherNotifier:
 
         today_count = len(by_offset.get(0, []))
         upcoming_count = sum(len(v) for k, v in by_offset.items() if k > 0)
-        lines.append(f"共 {len(tasks)} 项待办（逾期 {len(overdue)}，今日 {today_count}，"
+        overdue_label = f"逾期 {len(overdue)}"
+        if overdue:
+            _, older_cnt = split_overdue(overdue, today_str)
+            if older_cnt:
+                overdue_label += f"（{len(older_cnt)} 项超 {OVERDUE_NOTIFY_MAX_DAYS} 天已折叠）"
+        lines.append(f"共 {len(tasks)} 项待办（{overdue_label}，今日 {today_count}，"
                      f"未来 {upcoming_count}）")
 
         text = "\n".join(lines)

@@ -515,6 +515,23 @@ def push_to_feishu(dry_run=False, slot_id=None):
     print('--- Feishu Push Done ---\n')
 
 
+def wxpusher_enabled_flag():
+    """WXpusher 总开关：config.json 的 wxpusher_enabled 或环境变量 WXPUSHER_ENABLED=1。
+
+    提取为独立函数便于测试打桩（config 为 true 后，测试用 patch 模拟关闭态，
+    不再与本地真实配置耦合）。
+    """
+    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                if bool(json.load(f).get('wxpusher_enabled', False)):
+                    return True
+        except Exception:
+            pass
+    return os.environ.get('WXPUSHER_ENABLED', '').strip().lower() in ('1', 'true', 'yes')
+
+
 def push_to_wxpusher(dry_run=False, force=False, slot_id=None):
     """Push today's all TickTick tasks to WeChat via WXpusher.
 
@@ -537,20 +554,9 @@ def push_to_wxpusher(dry_run=False, force=False, slot_id=None):
         return
 
     # 开关检查（与飞书 webhook 的 env/config 双路一致）
-    if not force:
-        enabled = False
-        config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
-        if os.path.exists(config_path):
-            try:
-                with open(config_path, 'r', encoding='utf-8') as f:
-                    enabled = bool(json.load(f).get('wxpusher_enabled', False))
-            except Exception:
-                pass
-        if os.environ.get('WXPUSHER_ENABLED', '').strip().lower() in ('1', 'true', 'yes'):
-            enabled = True
-        if not enabled:
-            print('WXpusher push skipped (wxpusher_enabled not set)')
-            return
+    if not force and not wxpusher_enabled_flag():
+        print('WXpusher push skipped (wxpusher_enabled not set)')
+        return
 
     print('\n--- WXpusher Push (微信提醒) ---')
 

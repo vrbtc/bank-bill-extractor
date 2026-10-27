@@ -211,9 +211,15 @@ check("WXpusher 同档位已推送→跳过", "已推送过" in out and err is N
 out, err = run_push(gd.push_to_wxpusher, None, dry_run=True, force=True)
 check("WXpusher 无档位→跳过", "不在推送档位" in out and err is None)
 
-# 5.13 WXpusher 开关关闭 → 跳过（不打桩档位，走真实 config）
-out, err = run_push(gd.push_to_wxpusher, "t1700", dry_run=True, force=False)
-check("WXpusher 开关关闭→跳过", "wxpusher_enabled not set" in out and err is None)
+# 5.13 WXpusher 开关关闭 → 跳过（打桩开关函数，与本地真实 config 解耦：
+#      2026-10-27 起 config 的 wxpusher_enabled=true，本用例显式模拟关闭态）
+orig_flag = gd.wxpusher_enabled_flag
+try:
+    gd.wxpusher_enabled_flag = lambda: False
+    out, err = run_push(gd.push_to_wxpusher, "t1700", dry_run=True, force=False)
+    check("WXpusher 开关关闭→跳过", "wxpusher_enabled not set" in out and err is None)
+finally:
+    gd.wxpusher_enabled_flag = orig_flag
 
 print("== 6. 本地兜底：宽限期 + 截止时间 + 到期未推判定 ==")
 from push_schedule import due_unpaid_slots, SLOT_FALLBACK_DEADLINE, FALLBACK_GRACE_MIN
