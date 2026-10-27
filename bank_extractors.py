@@ -141,6 +141,13 @@ class BaseBankExtractor(ABC):
         额度已知且 0 < 金额 < 额度×1% → 标 `suspicious: true` 并记录原因
         （典型场景：把交易明细里的手续费/利息当成本期应还）。
         0.00（本期无需还款）与未知额度的情况不标记。
+
+        原因文案分层（2026-10-25 告警复盘）：金额条目带 `match` 字段
+        （提取自摘要区锚点/表行，如「本期应还款总额 New Balance」）时，
+        值为银行公告的真实应还款额、大概率是真实小额账单，文案给
+        「请人工核对」；无 `match`（兜底模式抓到的）才说「疑似误提取」，
+        提醒优先人工复核。历史误提取（明细区 ¥1.00 手续费）均来自
+        兜底路径，锚点路径至今零误判。
         """
         limit = bill_info.get('credit_limit')
         if not limit:
@@ -155,10 +162,17 @@ class BaseBankExtractor(ABC):
             value = amount_info.get('value', 0) or 0
             if 0 < value < limit * self.SUSPICIOUS_RATIO:
                 bill_info['suspicious'] = True
-                bill_info['suspicious_reason'] = (
-                    f"金额 ¥{value:,.2f} 低于信用额度 ¥{limit:,.0f} 的 1%，"
-                    f"疑似误提取，请人工核对"
-                )
+                match_src = amount_info.get('match')
+                if match_src:
+                    bill_info['suspicious_reason'] = (
+                        f"金额 ¥{value:,.2f} 低于信用额度 ¥{limit:,.0f} 的 1%，"
+                        f"提取自摘要区「{match_src}」，请人工核对是否真实小额账单"
+                    )
+                else:
+                    bill_info['suspicious_reason'] = (
+                        f"金额 ¥{value:,.2f} 低于信用额度 ¥{limit:,.0f} 的 1%，"
+                        f"疑似误提取，请人工核对"
+                    )
                 return
 
     @staticmethod
@@ -294,7 +308,10 @@ class GuangfaBankExtractor(BaseBankExtractor):
             try:
                 amount = float(amount_match.group(1).replace(',', ''))
                 if 0 < amount < 1000000:
-                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                    bill_info['amounts'] = [{
+                        'value': amount, 'currency': 'CNY',
+                        'match': '本期账单金额表行',
+                    }]
                     return
             except:
                 pass
@@ -304,7 +321,10 @@ class GuangfaBankExtractor(BaseBankExtractor):
             try:
                 amount = float(amount_match.group(1).replace(',', ''))
                 if 0 < amount < 1000000:
-                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                    bill_info['amounts'] = [{
+                        'value': amount, 'currency': 'CNY',
+                        'match': '本期账单金额表行',
+                    }]
                     return
             except:
                 pass
@@ -314,7 +334,10 @@ class GuangfaBankExtractor(BaseBankExtractor):
             try:
                 amount = float(amount_match.group(1).replace(',', ''))
                 if 0 < amount < 1000000:
-                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                    bill_info['amounts'] = [{
+                        'value': amount, 'currency': 'CNY',
+                        'match': '￥金额标签（兜底匹配）',
+                    }]
                     return
             except:
                 pass
@@ -825,7 +848,10 @@ class CIBBankExtractor(BaseBankExtractor):
             try:
                 amount = float(amount_match.group(1).replace(',', ''))
                 if 0 < amount < 1000000:
-                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                    bill_info['amounts'] = [{
+                        'value': amount, 'currency': 'CNY',
+                        'match': '本期应还款总额 New Balance',
+                    }]
                     return
             except:
                 pass
@@ -835,7 +861,10 @@ class CIBBankExtractor(BaseBankExtractor):
             try:
                 amount = float(amount_match.group(1).replace(',', ''))
                 if 0 < amount < 1000000:
-                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                    bill_info['amounts'] = [{
+                        'value': amount, 'currency': 'CNY',
+                        'match': '本期账单金额 New Activity',
+                    }]
                     return
             except:
                 pass
@@ -849,7 +878,10 @@ class CIBBankExtractor(BaseBankExtractor):
             try:
                 amount = float(amount_match.group(1).replace(',', ''))
                 if 0 < amount < 1000000:
-                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY'}]
+                    bill_info['amounts'] = [{
+                        'value': amount, 'currency': 'CNY',
+                        'match': 'New Balance 附近 RMB（兜底匹配）',
+                    }]
             except:
                 pass
 

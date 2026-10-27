@@ -33,6 +33,19 @@ def _log_quality_alerts(alerts):
         print(f"ERROR: 邮箱拉取失败 - {e['email']} ({e.get('label', '')}) - {e['error']}")
     for u in alerts.get('unrecognized_subjects', []):
         print(f"WARN: 非已知账单主题（未入链）- {u.get('subject', '')} ({u.get('date', '')})")
+    # 附件型历史账单回执（已抑制告警，不推飞书）：仅日志可见，便于追溯
+    for a in alerts.get('attachment_bills', []):
+        label = f" ({a['label']})" if a.get('label') else ''
+        print(f"INFO: 附件型历史账单回执（已抑制告警，不推飞书）- {a['bank']}{label} "
+              f"「{a['subject']}」 邮件 {a['date']} - {a['reason']}")
+        try:
+            from run_logger import log_event
+            log_event("attachment_bill_suppressed", bank=a['bank'],
+                      label=a.get('label', ''), subject=a['subject'],
+                      date=a.get('date', ''), reason=a['reason'],
+                      attachments=a.get('attachments', []))
+        except Exception:
+            pass
 
 
 def _push_quality_alerts(alerts):
@@ -105,6 +118,10 @@ def generate_dashboard():
             push_to_feishu()
         except Exception as e:
             print(f'Feishu push warning: {e}')
+        try:
+            push_to_wxpusher()
+        except Exception as e:
+            print(f'WXpusher push warning: {e}')
         _push_quality_alerts(alerts)
     else:
         print('Feishu push skipped (local role, cloud-first); alerts logged only')
@@ -275,6 +292,8 @@ def generate_dashboard():
             'suspicious': len(alerts.get('suspicious', [])),
             'needs_review': len(alerts.get('needs_review', [])),
             'email_failures': len(alerts.get('email_failures', [])),
+            # 附件型历史账单回执（已抑制，不参与飞书告警）：仅统计可见
+            'attachment_bills': len(alerts.get('attachment_bills', [])),
         },
     }
 
@@ -423,12 +442,17 @@ def sync_to_ticktick(bills):
     print('--- TickTick Sync Done ---\n')
 
 
-def push_to_feishu():
+def push_to_feishu(dry_run=False, slot_id=None):
     """Push today's all TickTick tasks to Feishu group.
 
-    现在推送的是今日所有代办（从 TickTick 拉取），不再仅是账单汇总。
-    账单任务作为代办的一部分自然包含在内。
-    需要 TICKTICK_API_KEY 和 FEISHU_WEBHOOK_URL。
+    推送档位制（2026-10-24）：由 push_schedule.PUSH_SLOTS 按北京时间判定档位
+    （morning/afternoon/t1700/evening/t2200），同档位每天只推一次；
+    无未完成待办时 send_today_tasks 返回 skipped，不推送。
+
+    Args:
+        dry_run: True 只构建不发送
+        slot_id: 指定档位（本地兜底 local_fallback.py 用，跳过窗口判断）；
+                 缺省按当前北京时间窗口判定
     """
     try:
         from feishu_notify import FeishuNotifier
@@ -458,29 +482,108 @@ def push_to_feishu():
 
     print('\n--- Feishu Push (代办提醒) ---')
 
-    # 时段守卫：北京 09:00-22:30 之外只同步不推送（凌晨/清晨运行免打扰）
-    now_bj = datetime.now(BJ_TZ)
-    if not (9 <= now_bj.hour < 22 or (now_bj.hour == 22 and now_bj.minute <= 30)):
-        print(f"  跳过推送：北京时间 {now_bj.strftime('%H:%M')} 在 09:00-22:30 之外")
+    # 推送档位制（2026-10-24）：替代原 09:00-22:30 硬守卫 + hour<14 模式分支。
+    # cron 延迟 3-5.5h 无法精确命中时刻，改为按北京时间档位判定；同档位每天只推一次。
+    # slot_id 由本地兜底看门狗显式指定时，跳过窗口判断直接推该档位。
+    from push_schedule import current_slot, already_pushed_today, mark_pushed_today, PUSH_SLOTS
+    if slot_id:
+        slot = next((s for s in PUSH_SLOTS if s["id"] == slot_id), None)
+    else:
+        slot = current_slot()
+    if not slot:
+        now_bj = datetime.now(BJ_TZ)
+        print(f"  跳过推送：北京时间 {now_bj.strftime('%H:%M')} 不在任何推送档位")
         print('--- Feishu Push Done ---\n')
         return
+    if already_pushed_today('feishu', slot['id']):
+        print(f"  跳过推送：今日 {slot['id']} 档（{slot['label']}）已推送过（防重复）")
+        print('--- Feishu Push Done ---\n')
+        return
+    now_bj = datetime.now(BJ_TZ)
+    print(f"  档位：{slot['id']}（{slot['label']}，北京 {now_bj.strftime('%H:%M')}）")
 
     notifier = FeishuNotifier(webhook_url=webhook_url)
-
-    # 按北京时间小时区分推送范围：
-    #   上午运行（hour < 14，对应 11:00 cron）→ 推送未来 4 天待办（含今天+明天+后天+大后天）
-    #   下午运行（hour >= 14，对应 17:00 cron）→ 只推送今日到期 + 逾期（紧急提醒）
-    now_bj_hour = now_bj.hour
-    if now_bj_hour < 14:
-        days = 4
-        print(f"  模式：上午（北京 {now_bj_hour} 时）→ 推送未来 4 天待办")
-    else:
-        days = 1
-        print(f"  模式：下午（北京 {now_bj_hour} 时）→ 推送今日 + 逾期紧急提醒")
-
-    result = notifier.send_today_tasks(api_key=api_key, days=days)
+    result = notifier.send_today_tasks(api_key=api_key, days=slot['days'], dry_run=dry_run)
+    if isinstance(result, dict) and result.get('skipped'):
+        # 无未完成待办：不推送（2026-10-24 用户要求）
+        print(f"  无待办事项，不推送（{result.get('reason', 'no_tasks')}）")
+        print('--- Feishu Push Done ---\n')
+        return
     print(f"  Push result: {result.get('StatusMessage', result)}")
+    if not dry_run:
+        mark_pushed_today('feishu', slot['id'])
     print('--- Feishu Push Done ---\n')
+
+
+def push_to_wxpusher(dry_run=False, force=False, slot_id=None):
+    """Push today's all TickTick tasks to WeChat via WXpusher.
+
+    档位制（2026-10-24）：仅在 t1700 / t2200 两个档位推送（用户要求：
+    仅下午 17:00 与晚上 22:00）；同档位每天只推一次；
+    无未完成待办时不推送。
+
+    Args:
+        dry_run: True 只构建不发送
+        force: True 无视 wxpusher_enabled 开关（本地测试用）
+        slot_id: 指定档位（本地兜底 local_fallback.py 用，跳过窗口判断）
+
+    开关：config.json 的 wxpusher_enabled（默认 false，未配置时跳过）；
+    环境变量 WXPUSHER_ENABLED=1 可临时开启。
+    """
+    try:
+        from wxpusher_notify import WXPusherNotifier
+    except Exception as e:
+        print(f'WXpusher push: import failed ({e}), skipping')
+        return
+
+    # 开关检查（与飞书 webhook 的 env/config 双路一致）
+    if not force:
+        enabled = False
+        config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    enabled = bool(json.load(f).get('wxpusher_enabled', False))
+            except Exception:
+                pass
+        if os.environ.get('WXPUSHER_ENABLED', '').strip().lower() in ('1', 'true', 'yes'):
+            enabled = True
+        if not enabled:
+            print('WXpusher push skipped (wxpusher_enabled not set)')
+            return
+
+    print('\n--- WXpusher Push (微信提醒) ---')
+
+    # 档位制（2026-10-24）：仅 t1700/t2200 两个档位推送；同档位每天只推一次
+    # slot_id 由本地兜底看门狗显式指定时，跳过窗口判断直接推该档位。
+    from push_schedule import current_slot, already_pushed_today, mark_pushed_today, PUSH_SLOTS, WXPUSHER_SLOTS
+    if slot_id:
+        slot = next((s for s in PUSH_SLOTS if s["id"] == slot_id), None)
+    else:
+        slot = current_slot()
+    if not slot or slot['id'] not in WXPUSHER_SLOTS:
+        now_bj = datetime.now(BJ_TZ)
+        print(f"  跳过推送：北京时间 {now_bj.strftime('%H:%M')} 不在推送档位（仅 17:00/22:00 档）")
+        print('--- WXpusher Push Done ---\n')
+        return
+    if already_pushed_today('wxpusher', slot['id']):
+        print(f"  跳过推送：今日 {slot['id']} 档已推送过（防重复）")
+        print('--- WXpusher Push Done ---\n')
+        return
+    now_bj = datetime.now(BJ_TZ)
+    print(f"  档位：{slot['id']}（{slot['label']}，北京 {now_bj.strftime('%H:%M')}）")
+
+    notifier = WXPusherNotifier()
+    result = notifier.send_today_tasks(days=slot['days'], dry_run=dry_run)
+    if isinstance(result, dict) and result.get('skipped'):
+        # 无未完成待办：不推送（2026-10-24 用户要求）
+        print(f"  无待办事项，不推送（{result.get('reason', 'no_tasks')}）")
+        print('--- WXpusher Push Done ---\n')
+        return
+    print(f"  WXpusher result: {result}")
+    if not dry_run:
+        mark_pushed_today('wxpusher', slot['id'])
+    print('--- WXpusher Push Done ---\n')
 
 
 def build_html(data_json):

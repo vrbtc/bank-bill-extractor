@@ -2,15 +2,16 @@ name: Deploy Bank Bill Dashboard
 
 on:
   schedule:
-    # 云端为主架构：每天 4 次全量同步（含逾期账单）。
-    # GitHub Actions cron 延迟严重（观察稳定在 3-5 小时），故提前 5 小时设置，
-    # 让实际运行时间接近北京 11:00 / 17:00 / 22:00 / 04:00
-    # 凌晨档（UTC 14 = 北京 22:00 设置，实际 03:00-05:00 运行）在飞书时段守卫
-    # （09:00-22:30）之外，只同步不推送，不打扰
-    - cron: '0 20 * * *'  # UTC 20:00 = 前一天北京 04:00（实际约 09:00-11:00，上午档推送）
-    - cron: '0 2 * * *'   # UTC 02:00 = 北京 10:00（实际约 15:00-17:00，下午档推送）
-    - cron: '0 8 * * *'   # UTC 08:00 = 北京 16:00（实际约 21:00-23:00，晚间档推送）
-    - cron: '0 14 * * *'  # UTC 14:00 = 北京 22:00（实际约 03:00-05:00，凌晨档只同步）
+    # 云端为主架构：每天 6 次运行（2026-10-24 增加 2 次，目标北京 17:00 / 22:00 推送档）。
+    # GitHub Actions cron 延迟不稳定（实测 3-5.5 小时），无法精确命中时刻；
+    # 具体推送时刻由 push_schedule.PUSH_SLOTS 按北京时间档位判定 + 同日去重，
+    # 不依赖 cron 精确命中，cron 只需保证每个档位窗口内有运行落入即可。
+    - cron: '0 20 * * *'  # UTC 20:00 = 北京 04:00（实际约 06:00-09:00，morning 档：未来4天）
+    - cron: '0 2 * * *'   # UTC 02:00 = 北京 10:00（实际约 14:00-16:00，afternoon 档：今日+逾期）
+    - cron: '0 4 * * *'   # UTC 04:00 = 北京 12:00（实际约 15:00-17:30，t1700 档：今日+逾期）★新增
+    - cron: '0 8 * * *'   # UTC 08:00 = 北京 16:00（实际约 20:00-22:00，evening 档：今日+逾期）
+    - cron: '0 9 * * *'   # UTC 09:00 = 北京 17:00（实际约 21:00-23:00，t2200 档：今日+逾期）★新增
+    - cron: '0 14 * * *'  # UTC 14:00 = 北京 22:00（实际约 02:00-05:00，凌晨档只同步不推送）
   push:
     branches: [ main ]
   workflow_dispatch:
@@ -63,6 +64,16 @@ jobs:
           IMAP_PORT: ${{ secrets.IMAP_PORT }}
           TICKTICK_API_KEY: ${{ secrets.TICKTICK_API_KEY }}
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          # WXpusher 微信推送（2026-10-27）：云端无 config.json（已被 .gitignore），
+          # 凭据只能走 GitHub Secrets。三个 secret 未配置时值为空字符串，
+          # generate_dashboard.push_to_wxpusher 判定为未启用并跳过，不会报错。
+          # 需在仓库 Settings → Secrets and variables → Actions 添加：
+          #   WXPUSHER_APP_TOKEN = AT_ 开头的 AppToken
+          #   WXPUSHER_UIDS      = UID_xxx,UID_yyy（多个用英文逗号分隔，安卓+苹果）
+          #   WXPUSHER_ENABLED   = 1
+          WXPUSHER_APP_TOKEN: ${{ secrets.WXPUSHER_APP_TOKEN }}
+          WXPUSHER_UIDS: ${{ secrets.WXPUSHER_UIDS }}
+          WXPUSHER_ENABLED: ${{ secrets.WXPUSHER_ENABLED }}
         run: |
           python generate_dashboard.py
 

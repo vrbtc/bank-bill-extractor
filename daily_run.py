@@ -49,6 +49,18 @@ def _log_quality_alerts(alerts):
         log(f"ERROR: 邮箱拉取失败 - {e['email']} ({e.get('label', '')}) - {e['error']}")
     for u in alerts.get('unrecognized_subjects', []):
         log(f"WARN: 非已知账单主题（未入链）- {u.get('subject', '')} ({u.get('date', '')})")
+    for a in alerts.get('attachment_bills', []):
+        label = f" ({a['label']})" if a.get('label') else ''
+        log(f"INFO: 附件型历史账单回执（已抑制告警，不推飞书）- {a['bank']}{label} "
+            f"「{a['subject']}」 邮件 {a['date']} - {a['reason']}")
+        try:
+            from run_logger import log_event
+            log_event("attachment_bill_suppressed", bank=a['bank'],
+                      label=a.get('label', ''), subject=a['subject'],
+                      date=a.get('date', ''), reason=a['reason'],
+                      attachments=a.get('attachments', []))
+        except Exception:
+            pass
 
 
 def _push_quality_alerts(alerts):

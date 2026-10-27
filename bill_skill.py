@@ -488,6 +488,7 @@ class BillSkill:
             'last_update': None,
             'bills_count': 0,
             'cache_age_hours': None,
+            'attachment_bills': 0,
             'skill_version': '1.0.0'
         }
         
@@ -497,7 +498,10 @@ class BillSkill:
                 data = result['data']
                 status['last_update'] = data.get('generated_at')
                 status['bills_count'] = data.get('total_bills', 0)
-                
+                # 附件型历史账单回执（已抑制告警，不推飞书）：此处可见便于追溯
+                alerts = data.get('extraction_alerts') or {}
+                status['attachment_bills'] = len(alerts.get('attachment_bills', []))
+
                 if self._cache_time:
                     age = (datetime.now() - self._cache_time).total_seconds() / 3600
                     status['cache_age_hours'] = round(age, 1)

@@ -8,10 +8,11 @@
 """
 
 import os
+import re
 import email
 import email.utils
 import json
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 
 from email_client import EmailClient
@@ -21,6 +22,200 @@ from bank_extractors import BankExtractorFactory, get_sub_account
 
 # 支持多邮箱配置：优先使用 get_all_emails()，单邮箱配置仍向后兼容
 from config import get_all_emails
+
+
+# 北京时区（与仪表盘/聚合口径一致）
+_BJ_TZ = timezone(timedelta(hours=8))
+
+
+# ===== 附件型历史账单回执识别与告警抑制（2026-10-26） =====
+#
+# 背景（实测取证）：兴业银行「兴业银行信用卡[202607-202607]电子账单」
+# 邮件 Date=Tue, 21 Jul 2026 19:53:34 +0800，MIME 只有两个 part：
+#   [0.1] application/octet-stream base64 129510B，附件名
+#         「信用卡历史账单[202607-202607].pdf」
+#   [0.2] text/html charset=gbk 46B → 解码 26 字符提示语
+#         「附件为您的信用卡历史账单，请查收，谢谢。」
+# 真实账单（本期应还款总额 RMB 5,100.30 / 到期还款日 2026年07月31日 /
+# 账单日 2026年07月11日）在 PDF 附件中。当前版本不解析附件，
+# CIBBankExtractor.extract_amount 必然全部落空 → 每天同一条「待人工提取」
+# 飞书告警。该期次（202607）距今 3 个月、与本月待还无关，属纯噪音。
+#
+# 设计约束：
+#   1. 只改告警分类，不改 bills 入链与金额聚合（封数/总额零变化）；
+#   2. 只有「提取失败 + 账单类附件 + 期次为历史月份（前前月及更早）」才抑制；
+#      上月/当期/次月（含期次无法判定）的附件型账单仍照常进「待人工提取」告警
+#      ——见下方 HISTORICAL_PERIOD_MONTHS_BEHIND 的阈值论证；
+#   3. 判定逻辑全部为纯函数，可单测（见 test_attachment_suppress.py）。
+
+# 账单类附件扩展名（排除 logo/图片等装饰性内联附件）
+ATTACHMENT_BILL_EXTENSIONS = ('.pdf', '.xls', '.xlsx', '.et', '.zip', '.rar')
+
+# 期次结束月落后当前月 >= N 个自然月即视为「历史」（默认 2：前前月及更早）
+#
+# 为什么不是 1（2026-10-27 QA 复核推翻原阈值）：
+#   还款日并不一定落在账单月内，上月期次完全可能尚未到期：
+#     - 兴业：202609 账单的到期还款日落在 2026-10-01（跨月）；
+#     - 招行：存在「账单日 + 20 天」口径，202609 账单还款日可能落在 2026-10-28
+#       （本地数据里确有「1 天后到期」的分组）。
+#   阈值 1（非当月即历史）在每月 1-20 日期间，会把「上月期次但还款日还没到」
+#   的附件型账单静默掉 → 真·漏单（比多告警严重得多）。
+#   实测反例：招商银行信用卡[202609-202609]电子账单 + PDF 附件，
+#   today=2026-10-27 → behind=1，旧阈值下 hit=True 被抑制。
+#
+# 为什么 2 安全：
+#   账单期次 <= 前前月时，其到期还款日必然早于今天——账单日 + 最长免息期（约 25 天）
+#   + 缓冲，最迟也在期次月份结束后的次月内到期；再往前推一个整月，
+#   数学上不可能还有未到期的还款日，故抑制不会漏单。
+#
+# 代价（明确的已知取舍）：
+#   上月（behind=1）的附件型账单会多告警一个月（每月最多 1-2 条 INFO 级噪音），
+#   用「多一条告警」换取「绝不静默未到期账单」。
+HISTORICAL_PERIOD_MONTHS_BEHIND = 2
+
+# 主题中的期次：[202607-202607] 或 [202607]
+_STATEMENT_PERIOD_BRACKET_RE = re.compile(
+    r'\[\s*(\d{6})\s*(?:[-~]\s*(\d{6})\s*)?\]')
+# 主题中的期次：2026年10月
+_STATEMENT_PERIOD_CN_RE = re.compile(r'(\d{4})\s*年\s*(\d{1,2})\s*月')
+
+
+def today_bj():
+    """返回北京时间的当天 date（供期次判定与测试注入）。"""
+    return datetime.now(_BJ_TZ).date()
+
+
+def list_attachment_names(msg, decoder=None):
+    """列出邮件附件名（已做 RFC2047 解码），无附件返回空列表。
+
+    Args:
+        msg: email.message.Message，可为 None
+        decoder: EmailDecoder 实例，默认新建
+
+    Returns:
+        list[str]: 附件文件名列表
+    """
+    names = []
+    if msg is None:
+        return names
+    decoder = decoder or EmailDecoder()
+    try:
+        for part in msg.walk():
+            filename = part.get_filename()
+            if filename:
+                names.append(decoder.decode_mime_words(filename))
+    except Exception:
+        pass
+    return names
+
+
+def is_bill_attachment(filename):
+    """判断文件名是否为「账单类附件」（纯函数）。"""
+    if not filename:
+        return False
+    return filename.lower().endswith(ATTACHMENT_BILL_EXTENSIONS)
+
+
+def parse_statement_period(subject):
+    """从邮件主题解析账单期次结束月，返回 'YYYYMM' 或 None（纯函数）。
+
+    支持：
+      - [202607-202607] → '202607'（取区间结束月）
+      - [202607]        → '202607'
+      - 2026年10月      → '202610'
+    无法解析（如纯通知类主题）返回 None —— 调用方应按「非历史」保守处理。
+    """
+    if not subject:
+        return None
+    match = _STATEMENT_PERIOD_BRACKET_RE.search(subject)
+    if match:
+        period = match.group(2) or match.group(1)
+        return _validate_period(period)
+    match = _STATEMENT_PERIOD_CN_RE.search(subject)
+    if match:
+        year, month = int(match.group(1)), int(match.group(2))
+        if 1 <= month <= 12:
+            return '%04d%02d' % (year, month)
+    return None
+
+
+def _validate_period(period):
+    """校验 'YYYYMM' 合法性，非法返回 None。"""
+    if not period or len(period) != 6 or not period.isdigit():
+        return None
+    month = int(period[4:])
+    if not 1 <= month <= 12:
+        return None
+    return period
+
+
+def months_behind(period_end, today=None):
+    """期次结束月距今多少个自然月（纯函数）。
+
+    Args:
+        period_end: 'YYYYMM'
+        today: datetime.date，默认北京时间今天
+
+    Returns:
+        int 或 None：期次非法返回 None；未来期次返回负数。
+    """
+    period_end = _validate_period(period_end)
+    if not period_end:
+        return None
+    if today is None:
+        today = today_bj()
+    year, month = int(period_end[:4]), int(period_end[4:])
+    return (today.year - year) * 12 + (today.month - month)
+
+
+def is_historical_period(period_end, today=None):
+    """期次是否属于「历史月份」（纯函数）。
+
+    历史 = 期次结束月落后当前月 >= HISTORICAL_PERIOD_MONTHS_BEHIND。
+    期次缺失/非法时返回 False —— 无法判定即按当期处理，保证不静默当期账单。
+    """
+    behind = months_behind(period_end, today=today)
+    if behind is None:
+        return False
+    return behind >= HISTORICAL_PERIOD_MONTHS_BEHIND
+
+
+def classify_attachment_receipt(msg, subject, date_str=None, today=None,
+                                decoder=None):
+    """判定邮件是否为「附件型历史账单回执」（可抑制告警）。
+
+    命中需同时满足（两个条件缺一不可）：
+      ① 邮件带账单类附件（PDF/表格/压缩包）——说明真实账单在附件里；
+      ② 主题可解析出期次且该期次属历史月份（落后当前月 >=
+         HISTORICAL_PERIOD_MONTHS_BEHIND，即前前月及更早）。
+         上月/当月/次月一律不抑制：上月期次的还款日可能尚未到期
+         （兴业 202609 账单落在 2026-10-01；招行 202609 账单
+         按「账单日+20 天」可能落在 2026-10-28），抑制会漏单。
+
+    Args:
+        msg: email.message.Message（用于取附件），None 时判定为不命中
+        subject: 邮件主题
+        date_str: 邮件 Date 头（仅用于日志记录，不参与判定）
+        today: datetime.date，默认北京时间今天（测试可注入）
+        decoder: EmailDecoder 实例
+
+    Returns:
+        tuple[bool, str, list[str]]: (是否命中, 原因文案, 账单类附件名列表)
+    """
+    attachments = [n for n in list_attachment_names(msg, decoder)
+                   if is_bill_attachment(n)]
+    if not attachments:
+        return False, '', []
+
+    period_end = parse_statement_period(subject)
+    if not is_historical_period(period_end, today=today):
+        return False, '', attachments
+
+    behind = months_behind(period_end, today=today)
+    reason = (f"附件型历史账单回执：期次 {period_end}（落后当前月 {behind} 个月），"
+              f"真实账单在附件 {'、'.join(attachments)} 中；"
+              f"与本月待还无关，已抑制「待人工提取」告警（不推飞书）")
+    return True, reason, attachments
 
 
 class BillExtractor:
@@ -139,7 +334,7 @@ class BillExtractor:
                         })
                         continue
                     print(f"[{idx}] {subject}")
-                    bills = self.extract_from_html(html_body, subject, date)
+                    bills = self.extract_from_html(html_body, subject, date, msg=msg)
                     # 给每个账单打上 source_label
                     for bill in bills:
                         bill['source_label'] = em_cfg.get('label', '')
@@ -192,8 +387,16 @@ class BillExtractor:
                 return value
         return None
     
-    def extract_from_html(self, html_content, subject, date):
-        """从 HTML 中提取账单信息"""
+    def extract_from_html(self, html_content, subject, date, msg=None):
+        """从 HTML 中提取账单信息
+
+        Args:
+            html_content: 邮件 HTML 正文（第一个 text/html part）
+            subject: 邮件主题
+            date: 邮件 Date 头
+            msg: 原始 email.message.Message（可选），供失败诊断识别
+                附件型账单（正文仅提示语、真实账单在 PDF 附件中）
+        """
         bills = []
         
         full_text = f"{subject}\n{html_content}"
@@ -248,8 +451,19 @@ class BillExtractor:
             # P0-1：识别为账单邮件但金额为空 → 标记提取失败，不再静默丢弃
             # （此前「有 due 无 amount」照常入链，滴答侧再静默跳过，全程零感知）
             bill_info['extraction_failed'] = True
-            bill_info['failure_reason'] = self._diagnose_failure(bill_info, html_content, extractor)
+            bill_info['failure_reason'] = self._diagnose_failure(
+                bill_info, html_content, extractor, msg=msg)
             print(f"  ❌ ERROR: {bank_name} 金额提取失败 - {bill_info['failure_reason']}")
+
+            # 附件型历史账单回执：命中则不进「待人工提取」告警，改记 attachment_bills
+            hit, why, files = classify_attachment_receipt(
+                msg, subject, date, decoder=self.email_decoder)
+            bill_info['attachment_files'] = files
+            if hit:
+                bill_info['attachment_receipt'] = True
+                bill_info['suppressed'] = True
+                bill_info['suppress_reason'] = why
+                print(f"  🔕 已抑制重复告警：{why}")
 
         # P0-2：提取层合理性闸门（额度×1%，先只告警不拦截）
         try:
@@ -265,9 +479,31 @@ class BillExtractor:
         
         return bills
 
-    def _diagnose_failure(self, bill_info, html_content, extractor):
-        """生成提取失败原因（供「待人工提取」告警卡片定位问题）。"""
+    def _diagnose_failure(self, bill_info, html_content, extractor, msg=None):
+        """生成提取失败原因（供「待人工提取」告警卡片定位问题）。
+
+        附件型账单识别：若邮件带附件（如 PDF 账单），正文通常只有一句
+        「附件为您的…账单，请查收」，金额在附件里——原因中注明附件名，
+        让人工知道需读取附件而非调试提取规则（已知限制：不解析附件）。
+        """
         extractor_name = type(extractor).__name__
+
+        # 附件清单（RFC2231 编码名经 decode_mime_words 归一化）
+        attachments = []
+        if msg is not None:
+            try:
+                for part in msg.walk():
+                    fname = part.get_filename()
+                    if fname:
+                        attachments.append(self.email_decoder.decode_mime_words(fname))
+            except Exception:
+                pass
+
+        if attachments:
+            return (f"{extractor_name}.extract_amount 所有模式落空：附件型账单，"
+                    f"正文仅 {len(html_content or '')} 字节提示语，真实账单在附件 "
+                    f"{'、'.join(attachments)} 中，需人工读取（当前版本不解析附件）")
+
         if not html_content or not html_content.strip():
             return f"{extractor_name}.extract_amount 落空：邮件无 HTML 正文（纯文本或解码失败）"
         try:
@@ -349,6 +585,8 @@ class BillExtractor:
             print(f"    ❌ 提取失败：{bill_info.get('failure_reason', '')}")
         if bill_info.get('needs_review'):
             print(f"    ⚠️ 待人工确认：{bill_info.get('review_reason', '')}")
+        if bill_info.get('suppressed'):
+            print(f"    🔕 告警已抑制：{bill_info.get('suppress_reason', '')}")
         if bill_info.get('suspicious'):
             print(f"    ⚠️ 金额可疑：{bill_info.get('suspicious_reason', '')}")
 
@@ -484,11 +722,12 @@ def collect_quality_alerts(bills, email_failures=None, unrecognized=None):
 
     Returns:
         dict: {
-            'extraction_failures': [...],  # 识别为账单但金额为空
+            'extraction_failures': [...],  # 识别为账单但金额为空（需人工提取）
             'suspicious': [...],           # 金额低于额度×1%（疑似误抓）
             'needs_review': [...],         # 有金额无还款日（未编造日期）
             'email_failures': [...],       # 单邮箱故障
             'unrecognized_subjects': [...],# 白名单外的银行关键词邮件
+            'attachment_bills': [...],     # 附件型历史账单回执（已抑制，不推飞书）
         }
     """
     def _entry(bill, reason):
@@ -500,12 +739,18 @@ def collect_quality_alerts(bills, email_failures=None, unrecognized=None):
             'due_dates': bill.get('due_dates', []),
             'amounts': [a.get('value') for a in bill.get('amounts', [])],
             'reason': reason,
+            'suppressed': bool(bill.get('suppressed')),
+            'attachments': bill.get('attachment_files', []),
         }
 
-    failures, suspicious, needs_review = [], [], []
+    failures, suspicious, needs_review, attachment_bills = [], [], [], []
     for bill in bills:
         if bill.get('extraction_failed'):
-            failures.append(_entry(bill, bill.get('failure_reason', '')))
+            if bill.get('suppressed'):
+                # 附件型历史账单回执：与本月待还无关，不进「待人工提取」告警
+                attachment_bills.append(_entry(bill, bill.get('suppress_reason', '')))
+            else:
+                failures.append(_entry(bill, bill.get('failure_reason', '')))
         if bill.get('suspicious'):
             suspicious.append(_entry(bill, bill.get('suspicious_reason', '')))
         if bill.get('needs_review'):
@@ -516,6 +761,7 @@ def collect_quality_alerts(bills, email_failures=None, unrecognized=None):
         'needs_review': needs_review,
         'email_failures': list(email_failures or []),
         'unrecognized_subjects': list(unrecognized or []),
+        'attachment_bills': attachment_bills,
     }
 
 
@@ -615,6 +861,10 @@ def main():
                   f"金额 {n['amounts']} - {n['reason']}")
         for e in alerts['email_failures']:
             print(f"  ❌ 邮箱故障: {e['email']} ({e.get('label', '')}) - {e['error']}")
+        for a in alerts.get('attachment_bills', []):
+            print(f"  🔕 附件型历史账单回执（已抑制告警，不推飞书）: {a['bank']}"
+                  f"{('(' + a['label'] + ')') if a['label'] else ''} "
+                  f"「{a['subject']}」 邮件 {a['date']} - {a['reason']}")
         print("!"*80)
 
     upcoming_bills = get_upcoming_bills(bills, days=None)
