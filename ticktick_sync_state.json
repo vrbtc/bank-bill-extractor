@@ -1,8 +1,14 @@
 {
-  "last_sync": "2026-10-26 23:39:16",
-  "created_count": 0,
+  "last_sync": "2026-10-27 01:09:15",
+  "created_count": 1,
   "skipped_count": 0,
-  "created_tasks": [],
+  "created_tasks": [
+    {
+      "bank": "建设银行",
+      "task_id": "6adff9bbe4b017ab340c7b4b",
+      "title": "💳 建行 25046.48 元"
+    }
+  ],
   "last_seen_titles": {
     "💳 兴业 17523.23 元": {
       "bank_name": "兴业银行",
@@ -129,6 +135,22 @@
           "amount": 246.7,
           "due_date": "2026-11-07",
           "days_until": 11
+        }
+      ]
+    },
+    "💳 建行 25046.48 元": {
+      "bank_name": "建设银行",
+      "abbr": "建行",
+      "label": "",
+      "sub_account": "",
+      "total_amount": 25046.48,
+      "due_date": "2026-11-15",
+      "details": [
+        {
+          "subject": "中国建设银行信用卡电子账单",
+          "amount": 25046.48,
+          "due_date": "2026-11-15",
+          "days_until": 19
         }
       ]
     },
