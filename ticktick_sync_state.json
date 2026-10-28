@@ -1,14 +1,8 @@
 {
-  "last_sync": "2026-10-28 07:46:39",
-  "created_count": 1,
+  "last_sync": "2026-10-28 10:22:56",
+  "created_count": 0,
   "skipped_count": 0,
-  "created_tasks": [
-    {
-      "bank": "民生银行",
-      "task_id": "6ae1a85fe4b0f11bdf2c01cb",
-      "title": "💳 民生 22419.02 元"
-    }
-  ],
+  "created_tasks": [],
   "last_seen_titles": {
     "💳 兴业 17523.23 元": {
       "bank_name": "兴业银行",
