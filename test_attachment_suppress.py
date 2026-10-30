@@ -210,7 +210,8 @@ print("\n== 5. classify_attachment_receipt（核心判定）==")
 hit, why, files = classify_attachment_receipt(
     msg_cib, CIB_SUBJECT, 'Tue, 21 Jul 2026 19:53:34 +0800', today=TODAY)
 check("兴业 202607 附件型回执 → 命中抑制", hit is True)
-check("命中原因为历史账单回执", '历史账单回执' in why, why)
+check("命中原因为补发/历史账单回执（2026-10-30 起方括号主题走补发分支）",
+      ('历史账单回执' in why) or ('补发回执' in why), why)
 check("命中原因含期次 202607", '202607' in why, why)
 check("命中原因含附件名", CIB_PDF_NAME in why, why)
 check("返回账单类附件列表", files == [CIB_PDF_NAME], files)
@@ -222,15 +223,24 @@ hit_old, why_old, _ = classify_attachment_receipt(
     build_cib_like_message(subject=subject_old), subject_old, None, today=TODAY)
 check(f"前前月（{period_old}，behind={HISTORICAL_PERIOD_MONTHS_BEHIND}）→ 命中抑制",
       hit_old is True, why_old)
-check("前前月命中原因为历史账单回执", '历史账单回执' in why_old, why_old)
+check("前前月命中原因为补发/历史账单回执",
+      ('历史账单回执' in why_old) or ('补发回执' in why_old), why_old)
 
+# 当期/次月方括号主题（2026-10-30 语义变更：方括号 = 补发通道回执 → 抑制）。
+# 原期望「不抑制」已翻转——用户 2026-10-30 明确要求手动补发的 PDF 一律忽略。
 hit_cur, why_cur, _ = classify_attachment_receipt(
     msg_cib, '兴业银行信用卡[202610-202610]电子账单', None, today=TODAY)
-check("当期（202610）附件型账单 → 不抑制（仍告警）", hit_cur is False, why_cur)
+check("当期（202610）方括号主题 + PDF → 抑制（补发回执，语义 2026-10-30 翻转）",
+      hit_cur is True, why_cur)
 
 hit_next, _, _ = classify_attachment_receipt(
     msg_cib, '兴业银行信用卡[202611-202611]电子账单', None, today=TODAY)
-check("次月（202611）附件型账单 → 不抑制（仍告警）", hit_next is False)
+check("次月（202611）方括号主题 + PDF → 抑制（补发回执）", hit_next is True)
+
+# 真正当期自动账单：中文年月主题、无方括号 → 必须仍告警（安全断言）
+hit_cn, _, _ = classify_attachment_receipt(
+    msg_cib, '兴业银行信用卡2026年10月电子账单', None, today=TODAY)
+check("当期自动账单（中文年月主题）+ PDF → 不抑制（不静默）", hit_cn is False)
 
 hit_noperiod, _, _ = classify_attachment_receipt(
     msg_cib, '兴业银行信用卡电子账单', None, today=TODAY)
@@ -368,33 +378,38 @@ cib.check_reasonableness(gate_bill4)
 check("额度未知不标记（保持原语义）", gate_bill4.get('suspicious') is None)
 
 print("\n== 9. QA 增补：classify 级边界（质量复核 2026-10-27）==")
-# 用例保留（QA 反例来源）。注意语义已随阈值收紧改写：
-# 阈值 = 2 后，上月（202609，behind=1）不再算历史 → 必须告警、绝不抑制。
-# 反例本身：招行 202609 账单按「账单日+20 天」还款日可能落在 2026-10-28，
-# 若按阈值 1 抑制就会漏掉一笔即将到期的账单。
-prev_subject = '兴业银行信用卡[202609-202609]电子账单'
+# 上月自动账单安全断言（QA 反例来源：招行 202609 按「账单日+20 天」还款日
+# 可能落在 2026-10-28，抑制会漏掉即将到期的账单）。
+# 2026-10-30 语义变更：方括号主题 = 补发通道回执 → 无条件抑制（用户手动触发、
+# 无漏单风险）；因此本安全断言改用**中文年月主题**（自动账单的真实格式）——
+# 上月自动账单（如银行改版后以中文主题补发上月账单）仍必须告警。
+cn_prev = '兴业银行信用卡2026年9月电子账单'
 hit_prev, why_prev, files_prev = classify_attachment_receipt(
-    build_cib_like_message(subject=prev_subject), prev_subject, None, today=TODAY)
-check("上月 202609 附件型回执 → 不抑制（还款日可能未到期，不得静默）",
+    build_cib_like_message(subject=cn_prev), cn_prev, None, today=TODAY)
+check("上月自动账单（中文主题 2026年9月）→ 不抑制（还款日可能未到期，不得静默）",
       hit_prev is False, why_prev)
 check("上月不抑制：原因文案为空，附件清单仍如实返回（供人工提取定位）",
       (why_prev, files_prev) == ('', [CIB_PDF_NAME]), (why_prev, files_prev))
 
-# 未来期次必须保守告警（期次在未来绝不能抑制）
-for period in ('202611', '202612'):
-    subj = f'兴业银行信用卡[{period}-{period}]电子账单'
+# 未来期次必须保守告警（期次在未来绝不能抑制）——中文年月主题（自动账单格式）
+for cn_month in ('2026年11月', '2026年12月'):
+    subj = f'兴业银行信用卡{cn_month}电子账单'
     h, _, _ = classify_attachment_receipt(msg_cib, subj, None, today=TODAY)
-    check(f"未来期次 [{period}] → 不抑制", h is False)
+    check(f"未来期次（{cn_month}，中文主题）→ 不抑制", h is False)
+# 方括号格式的"未来期次"实际不存在（补发通道只发历史/当期），
+# 方括号 + 未来期次按补发回执抑制（见 §10），不构成漏单风险。
 
 # 无附件但期次历史：返回值语义（False, '', []）
 h_na, w_na, f_na = classify_attachment_receipt(
     build_no_attachment_message(), CIB_SUBJECT, None, today=TODAY)
 check("无附件时原因与附件列表均为空", (w_na, f_na) == ('', []), (w_na, f_na))
 
-# 期次非法 + 有附件 → 保守告警
+# 方括号 + 期次区间非法（结束月 13 月）：仍按补发回执抑制——
+# 方括号格式本身即补发通道特征，期次合法性不影响"用户手动触发"的判定
 h_bad, _, _ = classify_attachment_receipt(
     msg_cib, '兴业银行信用卡[202607-202613]电子账单', None, today=TODAY)
-check("区间结束月非法 [202607-202613] → 不抑制", h_bad is False)
+check("区间结束月非法 [202607-202613]（方括号）→ 抑制（补发回执不看期次）",
+      h_bad is True)
 
 # 压缩包类附件（内容未知）按账单类附件处理
 msg_zip = MIMEMultipart('mixed')
@@ -413,6 +428,33 @@ check("全角括号【202607-202607】解析不到期次",
 # 特征化测试：主题含两个区间时只认第一个（已知限制，仅记录当前行为）
 check("双区间主题只取第一个区间（已知限制）",
       parse_statement_period('账单[202607-202607]重发[202610-202610]') == '202607')
+
+print("\n== 10. 方括号补发回执无条件抑制（2026-10-30 用户手动补发漏网修复）==")
+# 用户 2026-10-28 手动让银行补发两封回执，期次区间结束月均为当月 →
+# 原期次规则漏网：[202610-202610]（当月）、[202605-202610]（跨期取结束月）
+# 修复：方括号期次主题 = 补发通道回执 → 无条件抑制，不看期次新旧
+s1030 = '兴业银行信用卡[202610-202610]电子账单'
+hit_a, why_a, atts_a = classify_attachment_receipt(
+    build_cib_like_message(subject=s1030), s1030, None, today=TODAY)
+check("当月期次 [202610-202610] + PDF → 抑制（修复前漏网场景 1）", hit_a is True)
+check("抑制原因点明补发回执", "补发回执" in why_a, why_a)
+check("抑制原因含附件名", "信用卡历史账单" in why_a, why_a)
+
+s0510 = '兴业银行信用卡[202605-202610]电子账单'
+hit_b, why_b, _ = classify_attachment_receipt(
+    build_cib_like_message(subject=s0510), s0510, None, today=TODAY)
+check("跨期 [202605-202610] + PDF → 抑制（修复前漏网场景 2）", hit_b is True)
+
+# 关键安全断言：当期自动账单（中文年月、无方括号）不得被无条件抑制
+s_cn = '兴业银行信用卡2026年10月电子账单'
+hit_c, _, _ = classify_attachment_receipt(
+    build_cib_like_message(subject=s_cn), s_cn, None, today=TODAY)
+check("当期自动账单（中文年月主题）+ PDF → 仍告警（不静默）", hit_c is False)
+
+s_np = '兴业银行信用卡电子账单'
+hit_d, _, _ = classify_attachment_receipt(
+    build_cib_like_message(subject=s_np), s_np, None, today=TODAY)
+check("无期次主题 + PDF → 仍告警（保守）", hit_d is False)
 
 print("\n" + "=" * 60)
 print(f"结果：{passed} 通过 / {failed} 失败（共 {passed + failed} 项）")

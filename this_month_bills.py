@@ -184,13 +184,21 @@ def classify_attachment_receipt(msg, subject, date_str=None, today=None,
                                 decoder=None):
     """判定邮件是否为「附件型历史账单回执」（可抑制告警）。
 
-    命中需同时满足（两个条件缺一不可）：
+    命中需同时满足：
       ① 邮件带账单类附件（PDF/表格/压缩包）——说明真实账单在附件里；
-      ② 主题可解析出期次且该期次属历史月份（落后当前月 >=
-         HISTORICAL_PERIOD_MONTHS_BEHIND，即前前月及更早）。
-         上月/当月/次月一律不抑制：上月期次的还款日可能尚未到期
-         （兴业 202609 账单落在 2026-10-01；招行 202609 账单
-         按「账单日+20 天」可能落在 2026-10-28），抑制会漏单。
+      ② 且满足以下任一：
+         A. 主题含方括号期次格式（[YYYYMM] / [YYYYMM-YYYYMM]）——这是银行
+            「历史账单补发」通道的固定命名，由用户手动触发补发（2026-10-30
+            用户明确要求：手动补发的 PDF 一律忽略，不提醒）。真正的当期
+            自动账单主题是中文年月格式（如「2026年10月电子账单」），无方括号，
+            不受此条影响；
+         B. 主题可解析出期次且该期次属历史月份（落后当前月 >=
+            HISTORICAL_PERIOD_MONTHS_BEHIND，即前前月及更早）。
+            上月/当月/次月一律不抑制：上月期次的还款日可能尚未到期
+            （兴业 202609 账单落在 2026-10-01；招行 202609 账单
+            按「账单日+20 天」可能落在 2026-10-28），抑制会漏单。
+            （注：条件 A 不看期次——补发回执的期次区间结束月常为当月，
+            如 [202610-202610]、[202605-202610]，按期次判定会漏）
 
     Args:
         msg: email.message.Message（用于取附件），None 时判定为不命中
@@ -206,6 +214,16 @@ def classify_attachment_receipt(msg, subject, date_str=None, today=None,
                    if is_bill_attachment(n)]
     if not attachments:
         return False, '', []
+
+    # 条件 A：方括号期次主题 = 银行历史账单补发通道回执（用户手动触发），
+    # 无条件抑制——期次区间结束月常为当月（[202610-202610]、[202605-202610]），
+    # 按期次新旧判定会漏（2026-10-30 实测两封补发回执均漏网）。
+    # 真正当期自动账单主题为中文年月格式，无方括号，不会命中本条。
+    if _STATEMENT_PERIOD_BRACKET_RE.search(subject or ''):
+        reason = (f"附件型账单补发回执：主题含方括号期次区间（用户手动让银行补发），"
+                  f"真实账单在附件 {'、'.join(attachments)} 中；"
+                  f"按用户要求一律忽略，不提醒（不推飞书）")
+        return True, reason, attachments
 
     period_end = parse_statement_period(subject)
     if not is_historical_period(period_end, today=today):
