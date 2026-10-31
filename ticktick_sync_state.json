@@ -1,25 +1,9 @@
 {
-  "last_sync": "2026-10-31 10:13:17",
+  "last_sync": "2026-10-31 14:03:01",
   "created_count": 0,
   "skipped_count": 0,
   "created_tasks": [],
   "last_seen_titles": {
-    "💳 光大 34400.25 元": {
-      "bank_name": "光大银行",
-      "abbr": "光大",
-      "label": "",
-      "sub_account": "",
-      "total_amount": 34400.25,
-      "due_date": "2026-10-31",
-      "details": [
-        {
-          "subject": "光大信用卡电子账单",
-          "amount": 34400.25,
-          "due_date": "2026-10-31",
-          "days_until": 0
-        }
-      ]
-    },
     "💳 平安 5093.13 元": {
       "bank_name": "平安银行",
       "abbr": "平安",
