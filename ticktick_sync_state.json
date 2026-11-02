@@ -1,31 +1,9 @@
 {
-  "last_sync": "2026-11-02 08:41:11",
-  "created_count": 1,
+  "last_sync": "2026-11-02 12:01:16",
+  "created_count": 0,
   "skipped_count": 0,
-  "created_tasks": [
-    {
-      "bank": "工商银行",
-      "task_id": "6ae84ca7e4b0efba6980818b",
-      "title": "💳 工行 19483.51 元"
-    }
-  ],
+  "created_tasks": [],
   "last_seen_titles": {
-    "💳 平安 5093.13 元": {
-      "bank_name": "平安银行",
-      "abbr": "平安",
-      "label": "",
-      "sub_account": "",
-      "total_amount": 5093.13,
-      "due_date": "2026-11-01",
-      "details": [
-        {
-          "subject": "平安信用卡电子账单",
-          "amount": 5093.13,
-          "due_date": "2026-11-01",
-          "days_until": -1
-        }
-      ]
-    },
     "💳 邮储 2269.58 元": {
       "bank_name": "邮储银行",
       "abbr": "邮储",
