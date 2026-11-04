@@ -1,5 +1,5 @@
 {
-  "last_sync": "2026-11-04 08:22:03",
+  "last_sync": "2026-11-04 11:52:55",
   "created_count": 0,
   "skipped_count": 0,
   "created_tasks": [],
@@ -47,22 +47,6 @@
         {
           "subject": "招商银行信用卡电子账单",
           "amount": 8462.3,
-          "due_date": "2026-11-06",
-          "days_until": 2
-        }
-      ]
-    },
-    "💳 广发 130.30 元": {
-      "bank_name": "广发银行",
-      "abbr": "广发",
-      "label": "",
-      "sub_account": "",
-      "total_amount": 130.3,
-      "due_date": "2026-11-06",
-      "details": [
-        {
-          "subject": "广发信用卡 2026年10月电子账单",
-          "amount": 130.3,
           "due_date": "2026-11-06",
           "days_until": 2
         }
