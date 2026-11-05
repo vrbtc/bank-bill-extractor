@@ -1,14 +1,8 @@
 {
-  "last_sync": "2026-11-05 08:48:33",
-  "created_count": 1,
+  "last_sync": "2026-11-05 11:54:16",
+  "created_count": 0,
   "skipped_count": 0,
-  "created_tasks": [
-    {
-      "bank": "浦发银行",
-      "task_id": "6aec42e1e4b0b0ea8930f7b9",
-      "title": "💳 浦发 47687.42 元"
-    }
-  ],
+  "created_tasks": [],
   "last_seen_titles": {
     "💳 邮储 2269.58 元": {
       "bank_name": "邮储银行",
@@ -37,22 +31,6 @@
         {
           "subject": "招商银行分期信用卡电子账单",
           "amount": 2986.72,
-          "due_date": "2026-11-06",
-          "days_until": 1
-        }
-      ]
-    },
-    "💳 招行 8462.30 元": {
-      "bank_name": "招商银行",
-      "abbr": "招行",
-      "label": "",
-      "sub_account": "",
-      "total_amount": 8462.3,
-      "due_date": "2026-11-06",
-      "details": [
-        {
-          "subject": "招商银行信用卡电子账单",
-          "amount": 8462.3,
           "due_date": "2026-11-06",
           "days_until": 1
         }
