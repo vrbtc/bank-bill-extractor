@@ -1,25 +1,9 @@
 {
-  "last_sync": "2026-11-05 11:54:16",
+  "last_sync": "2026-11-05 15:56:42",
   "created_count": 0,
   "skipped_count": 0,
   "created_tasks": [],
   "last_seen_titles": {
-    "💳 邮储 2269.58 元": {
-      "bank_name": "邮储银行",
-      "abbr": "邮储",
-      "label": "",
-      "sub_account": "",
-      "total_amount": 2269.58,
-      "due_date": "2026-11-05",
-      "details": [
-        {
-          "subject": "邮储银行信用卡电子账单",
-          "amount": 2269.58,
-          "due_date": "2026-11-05",
-          "days_until": 0
-        }
-      ]
-    },
     "💳 招行分期卡 2986.72 元": {
       "bank_name": "招商银行",
       "abbr": "招行",
