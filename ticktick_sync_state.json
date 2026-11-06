@@ -1,25 +1,9 @@
 {
-  "last_sync": "2026-11-06 00:54:32",
+  "last_sync": "2026-11-06 08:48:55",
   "created_count": 0,
   "skipped_count": 0,
   "created_tasks": [],
   "last_seen_titles": {
-    "💳 招行分期卡 2986.72 元": {
-      "bank_name": "招商银行",
-      "abbr": "招行",
-      "label": "",
-      "sub_account": "分期卡",
-      "total_amount": 2986.72,
-      "due_date": "2026-11-06",
-      "details": [
-        {
-          "subject": "招商银行分期信用卡电子账单",
-          "amount": 2986.72,
-          "due_date": "2026-11-06",
-          "days_until": 0
-        }
-      ]
-    },
     "💳 平安 246.70 元 (YY)": {
       "bank_name": "平安银行",
       "abbr": "平安",
