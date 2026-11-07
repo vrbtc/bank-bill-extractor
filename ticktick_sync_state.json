@@ -1,8 +1,14 @@
 {
-  "last_sync": "2026-11-07 00:00:20",
-  "created_count": 0,
+  "last_sync": "2026-11-07 08:04:51",
+  "created_count": 1,
   "skipped_count": 0,
-  "created_tasks": [],
+  "created_tasks": [
+    {
+      "bank": "邮储银行",
+      "task_id": "6aeedba3e4b0277b898d0c09",
+      "title": "💳 邮储 12387.05 元"
+    }
+  ],
   "last_seen_titles": {
     "💳 建行 25046.48 元": {
       "bank_name": "建设银行",
@@ -81,6 +87,22 @@
           "amount": 47687.42,
           "due_date": "2026-11-22",
           "days_until": 15
+        }
+      ]
+    },
+    "💳 邮储 12387.05 元": {
+      "bank_name": "邮储银行",
+      "abbr": "邮储",
+      "label": "",
+      "sub_account": "",
+      "total_amount": 12387.05,
+      "due_date": "2026-11-26",
+      "details": [
+        {
+          "subject": "邮储银行信用卡电子账单",
+          "amount": 12387.05,
+          "due_date": "2026-11-26",
+          "days_until": 19
         }
       ]
     }
