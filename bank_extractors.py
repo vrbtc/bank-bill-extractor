@@ -909,11 +909,14 @@ class CIBBankExtractor(BaseBankExtractor):
         clean_text = soup.get_text()
         clean_text = ' '.join(clean_text.split())
 
+        # 模式1：本期应还款总额。允许 0.00 —— 账单周期内无欠款时该字段就是
+        # RMB 0.00（合理性闸门已明确 0.00 = 本期无需还款、不标 suspicious），
+        # 拒收 0 会导致每月零账单都误报「提取失败待人工提取」。
         amount_match = re.search(r'本期应还款总额\s*New Balance\s*RMB\s*([\d,]+\.\d+)', clean_text)
         if amount_match:
             try:
                 amount = float(amount_match.group(1).replace(',', ''))
-                if 0 < amount < 1000000:
+                if 0 <= amount < 1000000:
                     bill_info['amounts'] = [{
                         'value': amount, 'currency': 'CNY',
                         'match': '本期应还款总额 New Balance',
