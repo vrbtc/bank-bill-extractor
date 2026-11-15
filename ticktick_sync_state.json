@@ -1,25 +1,9 @@
 {
-  "last_sync": "2026-11-15 08:40:29",
+  "last_sync": "2026-11-15 11:46:55",
   "created_count": 0,
   "skipped_count": 0,
   "created_tasks": [],
   "last_seen_titles": {
-    "💳 交行 54762.78 元": {
-      "bank_name": "交通银行",
-      "abbr": "交行",
-      "label": "",
-      "sub_account": "",
-      "total_amount": 54762.78,
-      "due_date": "2026-11-15",
-      "details": [
-        {
-          "subject": "交通银行白金信用卡2026年10月电子账单",
-          "amount": 54762.78,
-          "due_date": "2026-11-15",
-          "days_until": 0
-        }
-      ]
-    },
     "💳 民生 22419.02 元": {
       "bank_name": "民生银行",
       "abbr": "民生",
