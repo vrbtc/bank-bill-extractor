@@ -1,25 +1,15 @@
 {
-  "last_sync": "2026-11-17 02:50:05",
-  "created_count": 0,
+  "last_sync": "2026-11-17 09:56:59",
+  "created_count": 1,
   "skipped_count": 0,
-  "created_tasks": [],
+  "created_tasks": [
+    {
+      "bank": "邮储银行",
+      "task_id": "6afc24ebe4b0329ef1acb8f4",
+      "title": "💳 邮储 2270.47 元"
+    }
+  ],
   "last_seen_titles": {
-    "💳 民生 22419.02 元": {
-      "bank_name": "民生银行",
-      "abbr": "民生",
-      "label": "",
-      "sub_account": "",
-      "total_amount": 22419.02,
-      "due_date": "2026-11-16",
-      "details": [
-        {
-          "subject": "民生信用卡2026年10月电子对账单",
-          "amount": 22419.02,
-          "due_date": "2026-11-16",
-          "days_until": -1
-        }
-      ]
-    },
     "💳 工行 19483.51 元": {
       "bank_name": "工商银行",
       "abbr": "工行",
@@ -97,6 +87,22 @@
           "amount": 8602.73,
           "due_date": "2026-12-01",
           "days_until": 14
+        }
+      ]
+    },
+    "💳 邮储 2270.47 元": {
+      "bank_name": "邮储银行",
+      "abbr": "邮储",
+      "label": "",
+      "sub_account": "",
+      "total_amount": 2270.47,
+      "due_date": "2026-12-06",
+      "details": [
+        {
+          "subject": "邮储银行信用卡电子账单",
+          "amount": 2270.47,
+          "due_date": "2026-12-06",
+          "days_until": 19
         }
       ]
     }
