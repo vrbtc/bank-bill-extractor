@@ -1,8 +1,14 @@
 {
-  "last_sync": "2026-11-18 02:14:55",
-  "created_count": 0,
+  "last_sync": "2026-11-18 09:32:19",
+  "created_count": 1,
   "skipped_count": 0,
-  "created_tasks": [],
+  "created_tasks": [
+    {
+      "bank": "广发银行",
+      "task_id": "6afd70a2e4b0441d7ce2e9da",
+      "title": "💳 广发 45433.73 元"
+    }
+  ],
   "last_seen_titles": {
     "💳 工行 19483.51 元": {
       "bank_name": "工商银行",
@@ -81,6 +87,22 @@
           "amount": 8602.73,
           "due_date": "2026-12-01",
           "days_until": 13
+        }
+      ]
+    },
+    "💳 广发 45433.73 元": {
+      "bank_name": "广发银行",
+      "abbr": "广发",
+      "label": "",
+      "sub_account": "",
+      "total_amount": 45433.73,
+      "due_date": "2026-12-06",
+      "details": [
+        {
+          "subject": "广发信用卡 2026年11月电子账单",
+          "amount": 45433.73,
+          "due_date": "2026-12-06",
+          "days_until": 18
         }
       ]
     },
