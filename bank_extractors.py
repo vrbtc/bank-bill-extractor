@@ -1053,7 +1053,23 @@ class CEBBankExtractor(BaseBankExtractor):
         soup = BeautifulSoup(full_text, 'html.parser')
         clean_text = soup.get_text()
         clean_text = ' '.join(clean_text.split())
-        
+
+        # ★ 2026-11 新版版式（真实邮件实证）：摘要区直接给出
+        # 「人民币本期应还款额 RMB Statement Balance ￥30,253.87」。
+        # 旧模式全锚定「本期账单金额」并取第二个 ￥ 金额（最低还款额/信用额度），
+        # 新版式下既匹配不到、匹配到也会取错列。此模式为高特异性锚定，
+        # 允许 0.00（本期无需还款，下游会过滤）。
+        amount_match = re.search(r'人民币本期应还款额\s*RMB\s*Statement Balance\s*[￥¥]\s*([\d,]+\.\d+)', clean_text)
+        if amount_match:
+            try:
+                amount = float(amount_match.group(1).replace(',', ''))
+                if 0 <= amount < 1000000:
+                    bill_info['amounts'] = [{'value': amount, 'currency': 'CNY',
+                                             'match': '人民币本期应还款额 RMB Statement Balance'}]
+                    return
+            except:
+                pass
+
         amount_match = re.search(r'人民币本期账单金额\s*RMB Statement Balance\s*人民币本期最低还款额.*?￥[\d,]+\.\d+\s*￥([\d,]+\.\d+)', clean_text)
         if amount_match:
             try:
@@ -1084,7 +1100,9 @@ class CEBBankExtractor(BaseBankExtractor):
             except:
                 pass
         
-        amount_match = re.search(r'本期欠款\s*Closing Balance[：:]\s*([\d,]+\.\d+)', clean_text)
+        # 明细区兜底：新版式写「本期欠款余额 Closing Balance：」，
+        # 旧正则要求「本期欠款」紧贴 Closing Balance，漏掉「余额」二字。
+        amount_match = re.search(r'本期欠款(?:余额)?\s*Closing Balance[：:]?\s*([\d,]+\.\d+)', clean_text)
         if amount_match:
             try:
                 amount = float(amount_match.group(1).replace(',', ''))
@@ -1097,7 +1115,13 @@ class CEBBankExtractor(BaseBankExtractor):
         soup = BeautifulSoup(full_text, 'html.parser')
         clean_text = soup.get_text()
         clean_text = ' '.join(clean_text.split())
-        
+
+        # ★ 2026-11 新版式摘要区：到期还款日 Payment Due Date 2026/12/01
+        # 后面紧跟的是信用额度而非第二个日期，旧双日期模式会落空。
+        due_match = re.search(r'到期还款日\s*Payment Due Date\s*(\d{4}/\d{2}/\d{2})', clean_text)
+        if due_match and self._append_due_date(bill_info, due_match.group(1).replace('/', '-')):
+            return
+
         due_match = re.search(r'到期还款日\s*Payment Due Date\s*信用额度.*?(\d{4}/\d{2}/\d{2})\s+(\d{4}/\d{2}/\d{2})', clean_text)
         if due_match:
             if self._append_due_date(bill_info, due_match.group(2)):
