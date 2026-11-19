@@ -1,8 +1,24 @@
 {
-  "last_sync": "2026-11-19 01:46:54",
-  "created_count": 0,
+  "last_sync": "2026-11-19 09:42:18",
+  "created_count": 3,
   "skipped_count": 0,
-  "created_tasks": [],
+  "created_tasks": [
+    {
+      "bank": "招商银行",
+      "task_id": "6afec478e4b059b9742f0547",
+      "title": "💳 招行分期卡 2787.26 元"
+    },
+    {
+      "bank": "招商银行",
+      "task_id": "6afec479e4b059b9742f0550",
+      "title": "💳 招行 25089.13 元"
+    },
+    {
+      "bank": "建设银行",
+      "task_id": "6afec479e4b0dc337eacba20",
+      "title": "💳 建行 239.00 元 (YY)"
+    }
+  ],
   "last_seen_titles": {
     "💳 工行 19483.51 元": {
       "bank_name": "工商银行",
@@ -84,6 +100,38 @@
         }
       ]
     },
+    "💳 招行分期卡 2787.26 元": {
+      "bank_name": "招商银行",
+      "abbr": "招行",
+      "label": "",
+      "sub_account": "分期卡",
+      "total_amount": 2787.26,
+      "due_date": "2026-12-06",
+      "details": [
+        {
+          "subject": "招商银行分期信用卡电子账单",
+          "amount": 2787.26,
+          "due_date": "2026-12-06",
+          "days_until": 17
+        }
+      ]
+    },
+    "💳 招行 25089.13 元": {
+      "bank_name": "招商银行",
+      "abbr": "招行",
+      "label": "",
+      "sub_account": "",
+      "total_amount": 25089.13,
+      "due_date": "2026-12-06",
+      "details": [
+        {
+          "subject": "招商银行信用卡电子账单",
+          "amount": 25089.13,
+          "due_date": "2026-12-06",
+          "days_until": 17
+        }
+      ]
+    },
     "💳 广发 45433.73 元": {
       "bank_name": "广发银行",
       "abbr": "广发",
@@ -113,6 +161,22 @@
           "amount": 2270.47,
           "due_date": "2026-12-06",
           "days_until": 17
+        }
+      ]
+    },
+    "💳 建行 239.00 元 (YY)": {
+      "bank_name": "建设银行",
+      "abbr": "建行",
+      "label": "YY",
+      "sub_account": "",
+      "total_amount": 239.0,
+      "due_date": "2026-12-07",
+      "details": [
+        {
+          "subject": "中国建设银行信用卡电子账单",
+          "amount": 239.0,
+          "due_date": "2026-12-07",
+          "days_until": 18
         }
       ]
     }
