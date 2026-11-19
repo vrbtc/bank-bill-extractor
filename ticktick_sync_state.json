@@ -1,24 +1,8 @@
 {
-  "last_sync": "2026-11-19 09:42:18",
-  "created_count": 3,
+  "last_sync": "2026-11-19 12:32:04",
+  "created_count": 0,
   "skipped_count": 0,
-  "created_tasks": [
-    {
-      "bank": "招商银行",
-      "task_id": "6afec478e4b059b9742f0547",
-      "title": "💳 招行分期卡 2787.26 元"
-    },
-    {
-      "bank": "招商银行",
-      "task_id": "6afec479e4b059b9742f0550",
-      "title": "💳 招行 25089.13 元"
-    },
-    {
-      "bank": "建设银行",
-      "task_id": "6afec479e4b0dc337eacba20",
-      "title": "💳 建行 239.00 元 (YY)"
-    }
-  ],
+  "created_tasks": [],
   "last_seen_titles": {
     "💳 工行 19483.51 元": {
       "bank_name": "工商银行",
