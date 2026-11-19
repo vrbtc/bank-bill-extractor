@@ -1,8 +1,14 @@
 {
-  "last_sync": "2026-11-19 12:32:04",
-  "created_count": 0,
+  "last_sync": "2026-11-19 12:39:39",
+  "created_count": 1,
   "skipped_count": 0,
-  "created_tasks": [],
+  "created_tasks": [
+    {
+      "bank": "光大银行",
+      "task_id": "6afeee0ae4b08269c81a6d40",
+      "title": "💳 光大 30253.87 元"
+    }
+  ],
   "last_seen_titles": {
     "💳 工行 19483.51 元": {
       "bank_name": "工商银行",
@@ -79,6 +85,22 @@
         {
           "subject": "平安信用卡电子账单",
           "amount": 8602.73,
+          "due_date": "2026-12-01",
+          "days_until": 12
+        }
+      ]
+    },
+    "💳 光大 30253.87 元": {
+      "bank_name": "光大银行",
+      "abbr": "光大",
+      "label": "",
+      "sub_account": "",
+      "total_amount": 30253.87,
+      "due_date": "2026-12-01",
+      "details": [
+        {
+          "subject": "光大信用卡电子账单",
+          "amount": 30253.87,
           "due_date": "2026-12-01",
           "days_until": 12
         }
