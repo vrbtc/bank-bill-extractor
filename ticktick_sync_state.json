@@ -1,8 +1,14 @@
 {
-  "last_sync": "2026-11-20 01:42:53",
-  "created_count": 0,
+  "last_sync": "2026-11-20 09:30:17",
+  "created_count": 1,
   "skipped_count": 0,
-  "created_tasks": [],
+  "created_tasks": [
+    {
+      "bank": "平安银行",
+      "task_id": "6b001329e4b049946b898b4b",
+      "title": "💳 平安 3900.66 元 (YY)"
+    }
+  ],
   "last_seen_titles": {
     "💳 浦发 47687.42 元": {
       "bank_name": "浦发银行",
@@ -145,6 +151,22 @@
           "amount": 2270.47,
           "due_date": "2026-12-06",
           "days_until": 16
+        }
+      ]
+    },
+    "💳 平安 3900.66 元 (YY)": {
+      "bank_name": "平安银行",
+      "abbr": "平安",
+      "label": "YY",
+      "sub_account": "",
+      "total_amount": 3900.66,
+      "due_date": "2026-12-07",
+      "details": [
+        {
+          "subject": "平安信用卡电子账单",
+          "amount": 3900.66,
+          "due_date": "2026-12-07",
+          "days_until": 17
         }
       ]
     },
