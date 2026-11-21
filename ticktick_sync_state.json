@@ -1,14 +1,8 @@
 {
-  "last_sync": "2026-11-21 09:00:46",
-  "created_count": 1,
+  "last_sync": "2026-11-21 12:09:25",
+  "created_count": 0,
   "skipped_count": 0,
-  "created_tasks": [
-    {
-      "bank": "长安银行",
-      "task_id": "6b015dbee4b03ce265764ecb",
-      "title": "💳 长安 35.33 元 (YY)"
-    }
-  ],
+  "created_tasks": [],
   "last_seen_titles": {
     "💳 浦发 47687.42 元": {
       "bank_name": "浦发银行",
