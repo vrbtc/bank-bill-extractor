@@ -1,25 +1,9 @@
 {
-  "last_sync": "2026-11-21 12:09:25",
+  "last_sync": "2026-11-21 15:48:17",
   "created_count": 0,
   "skipped_count": 0,
   "created_tasks": [],
   "last_seen_titles": {
-    "💳 浦发 47687.42 元": {
-      "bank_name": "浦发银行",
-      "abbr": "浦发",
-      "label": "",
-      "sub_account": "",
-      "total_amount": 47687.42,
-      "due_date": "2026-11-22",
-      "details": [
-        {
-          "subject": "浦发银行-信用卡电子账单",
-          "amount": 47687.42,
-          "due_date": "2026-11-22",
-          "days_until": 1
-        }
-      ]
-    },
     "💳 邮储 12387.05 元": {
       "bank_name": "邮储银行",
       "abbr": "邮储",
