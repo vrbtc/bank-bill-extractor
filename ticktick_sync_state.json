@@ -1,14 +1,8 @@
 {
-  "last_sync": "2026-11-22 09:09:06",
-  "created_count": 1,
+  "last_sync": "2026-11-22 12:18:38",
+  "created_count": 0,
   "skipped_count": 0,
-  "created_tasks": [
-    {
-      "bank": "交通银行",
-      "task_id": "6b02b131e4b0c0fef86377a1",
-      "title": "💳 交行 25202.13 元"
-    }
-  ],
+  "created_tasks": [],
   "last_seen_titles": {
     "💳 邮储 12387.05 元": {
       "bank_name": "邮储银行",
