@@ -1,8 +1,14 @@
 {
-  "last_sync": "2026-11-22 00:11:24",
-  "created_count": 0,
+  "last_sync": "2026-11-22 09:09:06",
+  "created_count": 1,
   "skipped_count": 0,
-  "created_tasks": [],
+  "created_tasks": [
+    {
+      "bank": "交通银行",
+      "task_id": "6b02b131e4b0c0fef86377a1",
+      "title": "💳 交行 25202.13 元"
+    }
+  ],
   "last_seen_titles": {
     "💳 邮储 12387.05 元": {
       "bank_name": "邮储银行",
@@ -161,6 +167,22 @@
           "amount": 239.0,
           "due_date": "2026-12-07",
           "days_until": 15
+        }
+      ]
+    },
+    "💳 交行 25202.13 元": {
+      "bank_name": "交通银行",
+      "abbr": "交行",
+      "label": "",
+      "sub_account": "",
+      "total_amount": 25202.13,
+      "due_date": "2026-12-15",
+      "details": [
+        {
+          "subject": "交通银行白金信用卡2026年11月电子账单",
+          "amount": 25202.13,
+          "due_date": "2026-12-15",
+          "days_until": 23
         }
       ]
     },
