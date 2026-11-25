@@ -48,6 +48,62 @@ def _log_quality_alerts(alerts):
             pass
 
 
+def _load_sms_cards_for_dashboard():
+    """读取本地 card_state.json + cards.yaml，整理出仪表盘可用额度区块数据。
+
+    返回 dict：{updated_at, cards: [{bank,last4,available_limit,total_limit,
+    statement_balance,min_due,due_date,event_ts,confidence}], loans: [...]}；
+    文件不存在返回 None。total_limit 来自 cards.yaml（用户登记，非权威字段）。
+    """
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'card_state.json')
+    if not os.path.exists(path):
+        return None
+    try:
+        doc = json.load(open(path, 'r', encoding='utf-8'))
+    except Exception as e:
+        print(f'WARN: card_state.json 读取失败: {e}')
+        return None
+
+    # cards.yaml 总额度映射（bank|last4 → total_limit）
+    total_by_key = {}
+    yaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cards.yaml')
+    if os.path.exists(yaml_path):
+        try:
+            import yaml
+            ydoc = yaml.safe_load(open(yaml_path, 'r', encoding='utf-8')) or {}
+            for c in ydoc.get('cards', []):
+                total_by_key[f"{c.get('bank', '')}|{str(c.get('last4') or '')}"] = c.get('total_limit')
+        except Exception as e:
+            print(f'WARN: cards.yaml 读取失败: {e}')
+
+    cards, loans = [], []
+    for key, st in (doc.get('cards') or {}).items():
+        cards.append({
+            'key': key,
+            'bank': st.get('bank') or key.split('|')[0],
+            'last4': st.get('last4') or '',
+            'available_limit': st.get('available_limit'),
+            'total_limit': total_by_key.get(key),
+            'statement_balance': st.get('statement_balance'),
+            'min_due': st.get('min_due'),
+            'due_date': st.get('due_date'),
+            'event_ts': st.get('event_ts'),
+            'confidence': st.get('confidence'),
+            'source': st.get('source'),
+        })
+    for key, st in (doc.get('loans') or {}).items():
+        rep = st.get('last_repayment') or {}
+        parts = key.split('|')
+        loans.append({
+            'key': key,
+            'bank': st.get('bank') or (parts[1] if len(parts) > 1 else key),
+            'note': rep.get('loan_note', ''),
+            'amount': rep.get('amount'),
+            'event_ts': rep.get('event_ts'),
+        })
+    return {'updated_at': doc.get('updated_at'), 'cards': cards, 'loans': loans}
+
+
 def _push_quality_alerts(alerts):
     """cloud 角色：经飞书推送「待人工提取」告警卡片。失败不影响仪表盘生成。"""
     if not (alerts.get('extraction_failures') or alerts.get('suspicious')
@@ -296,6 +352,10 @@ def generate_dashboard():
             'attachment_bills': len(alerts.get('attachment_bills', [])),
         },
     }
+
+    # 短信链路可用额度（2026-11-25）：读本地 card_state.json（已 gitignore，
+    # 云端 runner 无此文件 → 区块自动隐藏）。只做展示，不改账单/现金流字段。
+    data['sms_cards'] = _load_sms_cards_for_dashboard()
 
     data_json = json.dumps(data, ensure_ascii=False)
     html = build_html(data_json)
@@ -646,6 +706,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Ping
 .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 8px; }
 .badge.urgent { background: #dc2626; color: #fff; }
 .badge.warning { background: #f59e0b; color: #000; }
+.sms-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-bottom: 32px; }
+.sms-card { background: #1e293b; border-radius: 10px; padding: 16px 18px; border: 1px solid #334155; }
+.sms-card .sms-bank { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+.sms-card .sms-limit { font-size: 24px; font-weight: 700; color: #4ade80; }
+.sms-card .sms-limit.na { color: #64748b; font-size: 15px; font-weight: 500; }
+.sms-card .sms-sub { font-size: 12px; color: #94a3b8; margin-top: 6px; }
+.sms-card .sms-ts { font-size: 11px; color: #64748b; margin-top: 6px; }
+.sms-loans { margin-bottom: 32px; }
+.sms-loans .loan-line { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px 16px; margin-bottom: 8px; display: flex; justify-content: space-between; font-size: 13px; color: #cbd5e1; }
 .empty-state { text-align: center; padding: 48px 24px; color: #64748b; }
 .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
 .footer { text-align: center; padding: 24px 0; color: #475569; font-size: 12px; border-top: 1px solid #1e293b; margin-top: 32px; }
@@ -668,6 +737,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Ping
   </div>
   <div id="errorBanner"></div>
   <div class="stats-grid" id="statsGrid"></div>
+  <div class="section-title"><span class="dot" style="background:#22c55e"></span>信用卡可用额度（短信实时）</div>
+  <div id="smsSection"></div>
   <div class="section-title"><span class="dot"></span>近期待还款（15天内）</div>
   <div class="bills-list" id="urgentList"></div>
   <div class="section-title"><span class="dot" style="background:#f59e0b"></span>超过宽限期未确认（需人工核实是否已还）</div>
@@ -734,6 +805,61 @@ function render() {
   }
 }
 
+function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+function renderSms() {
+  var box = document.getElementById("smsSection");
+  var sms = DATA.sms_cards;
+  if (!sms || !sms.cards || sms.cards.length === 0) {
+    box.innerHTML = '<div class="empty-state"><div class="icon">&#x1F4F2;</div><div>暂无短信额度数据（sms_ingest 运行并收到短信后自动出现）</div></div>';
+    return;
+  }
+  var html = '';
+  var totalAvail = 0, totalLimit = 0, hasLimit = false;
+  sms.cards.forEach(function(c) {
+    if (c.available_limit != null) { totalAvail += c.available_limit; hasLimit = true; }
+    if (c.total_limit != null) totalLimit += c.total_limit;
+  });
+  if (hasLimit) {
+    var usage = (totalLimit > 0) ? ((1 - totalAvail / totalLimit) * 100).toFixed(2) + '%' : '-';
+    html += '<div class="sms-grid"><div class="sms-card" style="border-color:#22c55e">'
+          + '<div class="sms-bank">📊 合计（' + sms.cards.length + ' 张卡）</div>'
+          + '<div class="sms-limit">' + fmt(totalAvail) + '</div>'
+          + '<div class="sms-sub">总额度 ' + (totalLimit > 0 ? fmt(totalLimit) : '-') + ' · 使用率 ' + usage + '</div>'
+          + '</div></div>';
+  }
+  html += '<div class="sms-grid">';
+  sms.cards.forEach(function(c) {
+    var limit = (c.available_limit != null) ? fmt(c.available_limit) : "待短信更新";
+    var limitCls = (c.available_limit != null) ? "" : "na";
+    var tail = c.last4 ? "尾号" + c.last4 : "未登记尾号";
+    var sub = [];
+    if (c.total_limit != null && c.available_limit != null) {
+      sub.push("总额度 " + fmt(c.total_limit) + " · 使用 " + ((1 - c.available_limit / c.total_limit) * 100).toFixed(1) + "%");
+    } else if (c.total_limit != null) {
+      sub.push("总额度 " + fmt(c.total_limit));
+    }
+    if (c.statement_balance != null) sub.push("本期应还 " + fmt(c.statement_balance));
+    if (c.min_due != null) sub.push("最低 " + fmt(c.min_due));
+    if (c.due_date) sub.push("还款日 " + c.due_date);
+    html += '<div class="sms-card"><div class="sms-bank">' + esc(c.bank) + ' <span style="color:#64748b;font-size:12px">' + tail + '</span></div>'
+          + '<div class="sms-limit ' + limitCls + '">' + limit + '</div>'
+          + (sub.length ? '<div class="sms-sub">' + esc(sub.join(" · ")) + '</div>' : '')
+          + '<div class="sms-ts">更新于 ' + esc(c.event_ts || "-") + (c.source ? ' · ' + esc(c.source) : '') + '</div></div>';
+  });
+  html += '</div>';
+  if (sms.loans && sms.loans.length > 0) {
+    html += '<div class="sms-loans">';
+    sms.loans.forEach(function(l) {
+      html += '<div class="loan-line"><span>' + esc(l.bank) + (l.note ? "（" + esc(l.note) + "）" : "") + ' 最近扣款</span><span>' + (l.amount != null ? fmt(l.amount) : "-") + ' @ ' + esc(l.event_ts || "-") + '</span></div>';
+    });
+    html += '</div>';
+  }
+  html += '<div style="font-size:11px;color:#475569;margin-bottom:16px">数据来源：银行短信解析（1-5 分钟延迟），账单金额仍以邮件账单为权威源。更新于 ' + esc(sms.updated_at || "-") + '</div>';
+  box.innerHTML = html;
+}
+
+renderSms();
 render();
 </script>
 </body>

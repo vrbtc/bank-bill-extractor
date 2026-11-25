@@ -84,6 +84,12 @@ bills_export_*.json
 # Configuration files with secrets
 config.json
 
+# SMS 链路状态/登记文件（public 仓库不得含卡尾号/额度/验证码等敏感信息）
+card_state.json
+sms_events.jsonl
+sms_state.json
+cards.yaml
+
 # HTML test files
 *.html
 
@@ -128,3 +134,5 @@ setup_task.ps1
 fix-task.ps1
 .auto-sync-runner.bat
 auto-sync.ps1
+sms_ingest_runner.ps1
+sms_ingest_console.log
