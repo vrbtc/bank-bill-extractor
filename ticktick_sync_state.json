@@ -1,25 +1,9 @@
 {
-  "last_sync": "2026-11-26 02:42:54",
+  "last_sync": "2026-11-26 10:16:05",
   "created_count": 0,
   "skipped_count": 0,
   "created_tasks": [],
   "last_seen_titles": {
-    "💳 邮储 12387.05 元": {
-      "bank_name": "邮储银行",
-      "abbr": "邮储",
-      "label": "",
-      "sub_account": "",
-      "total_amount": 12387.05,
-      "due_date": "2026-11-26",
-      "details": [
-        {
-          "subject": "邮储银行信用卡电子账单",
-          "amount": 12387.05,
-          "due_date": "2026-11-26",
-          "days_until": 0
-        }
-      ]
-    },
     "💳 兴业 38818.93 元": {
       "bank_name": "兴业银行",
       "abbr": "兴业",
