@@ -1,14 +1,8 @@
 {
-  "last_sync": "2026-11-27 10:22:20",
-  "created_count": 1,
+  "last_sync": "2026-11-27 13:31:22",
+  "created_count": 0,
   "skipped_count": 0,
-  "created_tasks": [
-    {
-      "bank": "建设银行",
-      "task_id": "6b0959dbe4b01d26e58b3013",
-      "title": "💳 建行 27802.80 元"
-    }
-  ],
+  "created_tasks": [],
   "last_seen_titles": {
     "💳 兴业 38818.93 元": {
       "bank_name": "兴业银行",
