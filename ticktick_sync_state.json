@@ -1,8 +1,14 @@
 {
-  "last_sync": "2026-11-28 09:39:33",
-  "created_count": 0,
+  "last_sync": "2026-11-28 12:44:46",
+  "created_count": 1,
   "skipped_count": 0,
-  "created_tasks": [],
+  "created_tasks": [
+    {
+      "bank": "民生银行",
+      "task_id": "6b0accbee4b01d26e5a19a80",
+      "title": "💳 民生 28163.56 元"
+    }
+  ],
   "last_seen_titles": {
     "💳 兴业 38818.93 元": {
       "bank_name": "兴业银行",
@@ -193,6 +199,22 @@
           "amount": 35.33,
           "due_date": "2026-12-15",
           "days_until": 17
+        }
+      ]
+    },
+    "💳 民生 28163.56 元": {
+      "bank_name": "民生银行",
+      "abbr": "民生",
+      "label": "",
+      "sub_account": "",
+      "total_amount": 28163.56,
+      "due_date": "2026-12-17",
+      "details": [
+        {
+          "subject": "民生信用卡2026年11月电子对账单",
+          "amount": 28163.56,
+          "due_date": "2026-12-17",
+          "days_until": 19
         }
       ]
     }
