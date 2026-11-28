@@ -1,14 +1,8 @@
 {
-  "last_sync": "2026-11-28 12:44:46",
-  "created_count": 1,
+  "last_sync": "2026-11-28 16:30:14",
+  "created_count": 0,
   "skipped_count": 0,
-  "created_tasks": [
-    {
-      "bank": "民生银行",
-      "task_id": "6b0accbee4b01d26e5a19a80",
-      "title": "💳 民生 28163.56 元"
-    }
-  ],
+  "created_tasks": [],
   "last_seen_titles": {
     "💳 兴业 38818.93 元": {
       "bank_name": "兴业银行",
@@ -22,7 +16,7 @@
           "subject": "兴业银行信用卡2026年11月电子账单",
           "amount": 38818.93,
           "due_date": "2026-11-30",
-          "days_until": 2
+          "days_until": 1
         }
       ]
     },
@@ -38,7 +32,7 @@
           "subject": "平安信用卡电子账单",
           "amount": 8602.73,
           "due_date": "2026-12-01",
-          "days_until": 3
+          "days_until": 2
         }
       ]
     },
@@ -54,7 +48,7 @@
           "subject": "光大信用卡电子账单",
           "amount": 30253.87,
           "due_date": "2026-12-01",
-          "days_until": 3
+          "days_until": 2
         }
       ]
     },
@@ -70,7 +64,7 @@
           "subject": "招商银行分期信用卡电子账单",
           "amount": 2787.26,
           "due_date": "2026-12-06",
-          "days_until": 8
+          "days_until": 7
         }
       ]
     },
@@ -86,7 +80,7 @@
           "subject": "招商银行信用卡电子账单",
           "amount": 25089.13,
           "due_date": "2026-12-06",
-          "days_until": 8
+          "days_until": 7
         }
       ]
     },
@@ -102,7 +96,7 @@
           "subject": "广发信用卡 2026年11月电子账单",
           "amount": 45433.73,
           "due_date": "2026-12-06",
-          "days_until": 8
+          "days_until": 7
         }
       ]
     },
@@ -118,7 +112,7 @@
           "subject": "邮储银行信用卡电子账单",
           "amount": 2270.47,
           "due_date": "2026-12-06",
-          "days_until": 8
+          "days_until": 7
         }
       ]
     },
@@ -134,7 +128,7 @@
           "subject": "平安信用卡电子账单",
           "amount": 3900.66,
           "due_date": "2026-12-07",
-          "days_until": 9
+          "days_until": 8
         }
       ]
     },
@@ -150,7 +144,7 @@
           "subject": "中国建设银行信用卡电子账单",
           "amount": 239.0,
           "due_date": "2026-12-07",
-          "days_until": 9
+          "days_until": 8
         }
       ]
     },
@@ -166,7 +160,7 @@
           "subject": "中国建设银行信用卡电子账单",
           "amount": 27802.8,
           "due_date": "2026-12-15",
-          "days_until": 17
+          "days_until": 16
         }
       ]
     },
@@ -182,7 +176,7 @@
           "subject": "交通银行白金信用卡2026年11月电子账单",
           "amount": 25202.13,
           "due_date": "2026-12-15",
-          "days_until": 17
+          "days_until": 16
         }
       ]
     },
@@ -198,7 +192,7 @@
           "subject": "长安银行信用卡电子账单",
           "amount": 35.33,
           "due_date": "2026-12-15",
-          "days_until": 17
+          "days_until": 16
         }
       ]
     },
@@ -214,7 +208,7 @@
           "subject": "民生信用卡2026年11月电子对账单",
           "amount": 28163.56,
           "due_date": "2026-12-17",
-          "days_until": 19
+          "days_until": 18
         }
       ]
     }
